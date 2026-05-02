@@ -238,9 +238,6 @@ function CenterPanel({ }: CenterPanelProps) {
                 </div>
                 <div className="flex flex-col gap-2 p-4">
                     <ChatInput />
-                    <p className="text-center text-xs text-white/40">
-                        Roundtable AI는 부정확한 정보를 제공할 수 있으므로 중요한 정보는 재차 확인하세요.
-                    </p>
                 </div>
             </div>
         </Panel>
