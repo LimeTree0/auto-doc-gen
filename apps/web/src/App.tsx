@@ -1,13 +1,12 @@
+import Header from "./components/header/Header";
 import { CenterPanel, LeftPanel, RightPanel } from "./components/panel/ContentPanel";
 
 function App() {
 
   return (
     <div className="bg-[#1A1D22] w-full h-full flex flex-col">
-      <div>
-        <h1 className="text-4xl font-bold text-white">Hello World</h1>
-      </div>
-      <div className="flex flex-row rounded-lg gap-4 flex-1 px-8 pb-3">
+      <Header />
+      <div className="flex flex-row rounded-lg gap-4 flex-1 min-h-0 px-8 py-4">
         <LeftPanel />
         <CenterPanel />
         <RightPanel />
