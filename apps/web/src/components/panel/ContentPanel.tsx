@@ -96,7 +96,7 @@ function SelectAllRow({ checked }: { checked: boolean }) {
         <button
             type="button"
             onClick={() => { }}
-            className="flex w-full items-center justify-between rounded-md px-2 py-2 hover:bg-white/5"
+            className="flex w-full items-center justify-end gap-2 rounded-md px-2 py-2 hover:bg-white/5"
         >
             <span className="text-sm text-white">모두 선택</span>
             <SourceCheckbox checked={checked} />
