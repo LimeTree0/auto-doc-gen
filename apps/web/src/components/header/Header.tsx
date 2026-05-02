@@ -10,9 +10,9 @@ function Logo() {
 
 function SharedBadge() {
     return (
-        <div className="flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5">
-            <Link2 className="size-3 text-white/70" strokeWidth={2} />
-            <span className="text-xs text-white/70">공유됨</span>
+        <div className="flex items-center gap-1 rounded-sm bg-[#000000] px-2.5 py-0.5">
+            <Link2 className="size-4 text-white" strokeWidth={2} />
+            <span className="text-xs text-[#F7F3F7]">공유됨</span>
         </div>
     )
 }
