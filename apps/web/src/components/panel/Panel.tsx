@@ -10,7 +10,7 @@ function Panel({ title, buttonArea, className, children }: PanelProps) {
     return (
         <div className={classes}>
             <div className="bg-[#22262b] p-4 border-b border-[#37383B] flex flex-row justify-between items-center">
-                <span className="text-white text-sm">{title}</span>
+                <span className="text-white text-base">{title}</span>
                 {buttonArea}
             </div>
             <div className="flex-1 min-h-0">

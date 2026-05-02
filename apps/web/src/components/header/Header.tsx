@@ -40,7 +40,7 @@ function Header() {
         <header className="flex items-center justify-between border-b border-[#37383B] px-6 py-3">
             <div className="flex items-center gap-3">
                 <Logo />
-                <span className="text-base font-semibold text-white">Voice Test Recording</span>
+                <span className="text-xl font-semibold text-white">Voice Test Recording</span>
                 <SharedBadge />
             </div>
             <div className="flex items-center gap-2">
@@ -54,7 +54,7 @@ function Header() {
                 >
                     <LayoutGrid className="size-5 text-white" strokeWidth={2} />
                 </button>
-                <div className="size-7 rounded bg-gradient-to-br from-rose-400 to-amber-400" />
+                <div className="size-7 rounded bg-linear-to-br from-rose-400 to-amber-400" />
             </div>
         </header>
     )
