@@ -1,4 +1,4 @@
-import { ArrowUp, Check, FileSpreadsheet, FileText, MoveRight, Network, PanelRight, Paperclip, Plus, RefreshCw, Search, Sparkles } from "lucide-react";
+import { ArrowUp, Check, FileSpreadsheet, FileText, Headphones, MoveRight, Network, PanelLeft, PanelRight, Paperclip, Play, Plus, RefreshCw, Search, Sparkles, StickyNote, Video } from "lucide-react";
 import Panel from "./Panel";
 
 type SourceAddButtonProps = {
@@ -247,14 +247,117 @@ function CenterPanel({ }: CenterPanelProps) {
     )
 }
 
+function StudioTab({ label, active }: { label: string; active: boolean }) {
+    return (
+        <button
+            type="button"
+            onClick={() => { }}
+            className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs ${active
+                ? 'border-white/80 bg-white/10 text-white'
+                : 'border-[#37383B] text-white/60 hover:bg-white/5'
+                }`}
+        >
+            <span>{label}</span>
+        </button>
+    )
+}
+
+type OverviewCardProps = {
+    icon: React.ReactNode;
+    title: string;
+    subtitle: string;
+}
+
+function OverviewCard({ icon, title, subtitle }: OverviewCardProps) {
+    return (
+        <div className="flex items-center gap-3 rounded-xl border border-[#37383B] bg-[#1A1D22] p-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15">
+                {icon}
+            </div>
+            <div className="flex flex-1 flex-col">
+                <span className="text-sm text-white">{title}</span>
+                <span className="text-xs text-white/40">{subtitle}</span>
+            </div>
+            <button
+                type="button"
+                onClick={() => { }}
+                className="flex size-8 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"
+            >
+                <Play className="size-3.5 text-white" strokeWidth={2} fill="currentColor" />
+            </button>
+        </div>
+    )
+}
+
+const MEMOS: string[] = [
+    'AI 기능 개발 일정 변경',
+    '다국어 음성 인식 정확도 개선 방안',
+    'LLM 모델별 비용 효율성 비교 분석',
+    '사용자 피드백 기반 UI/UX 개선',
+    'AI 기능 출시 마일스톤 정리',
+    '회의록: 음성 코칭 프로젝트 킥오프',
+    'LLM 개발 우선순위 결정 회의',
+]
+
+function MemoItem({ title }: { title: string }) {
+    return (
+        <button
+            type="button"
+            onClick={() => { }}
+            className="flex w-full items-center gap-2 rounded-lg border border-[#37383B] bg-[#1A1D22] px-3 py-2.5 text-left hover:bg-white/5"
+        >
+            <StickyNote className="size-4 shrink-0 text-amber-300" strokeWidth={2} />
+            <span className="flex-1 truncate text-sm text-white">{title}</span>
+        </button>
+    )
+}
+
 type RightPanelProps = {
     className?: string;
 }
 
 function RightPanel({ }: RightPanelProps) {
     return (
-        <Panel className="w-[25vw]" title="출처" buttonArea={<img src="/icons/arrow-right.svg" alt="arrow-right" className="w-4 h-4" />}>
-
+        <Panel
+            className="w-[25vw]"
+            title="스튜디오"
+            buttonArea={<PanelLeft className="size-4 text-white" strokeWidth={2} />}
+        >
+            <div className="flex h-full flex-col gap-4 overflow-y-auto p-4">
+                <div className="flex gap-2">
+                    <StudioTab label="오디오" active />
+                    <StudioTab label="Video" active={false} />
+                </div>
+                <div className="flex flex-col gap-2">
+                    <OverviewCard
+                        icon={<Headphones className="size-5 text-emerald-400" strokeWidth={2} />}
+                        title="Audio Overview"
+                        subtitle="대화형 요약 · 약 12분"
+                    />
+                    <OverviewCard
+                        icon={<Video className="size-5 text-emerald-400" strokeWidth={2} />}
+                        title="Video Overview"
+                        subtitle="시각 자료 요약 · 약 5분"
+                    />
+                </div>
+                <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between px-1">
+                        <span className="text-sm font-medium text-white">메모</span>
+                        <button
+                            type="button"
+                            onClick={() => { }}
+                            className="flex size-6 items-center justify-center rounded-full hover:bg-white/5"
+                        >
+                            <Plus className="size-4 text-white" strokeWidth={2} />
+                        </button>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        {MEMOS.map((title) => (
+                            <MemoItem key={title} title={title} />
+                        ))}
+                    </div>
+                </div>
+            </div>
         </Panel>
     )
 }
