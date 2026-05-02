@@ -6,21 +6,22 @@ type SourceAddButtonProps = {
 }
 
 function SourceAddButton({ }: SourceAddButtonProps) {
+    const textColor = 'text-[#ABABAB]';
     return (
         <button
             type="button"
             onClick={() => { }}
-            className="flex w-full items-center justify-center gap-2 rounded-full border border-[#37383B] px-4 py-2 hover:bg-white/5"
+            className="flex w-full items-center justify-center gap-2 rounded-full border border-border px-4 py-2 hover:bg-white/5"
         >
-            <Plus className="size-4 text-white" strokeWidth={2} />
-            <span className="text-sm text-white">소스 추가</span>
+            <Plus className={`size-4 ${textColor}`} strokeWidth={2} />
+            <span className={`text-sm ${textColor}`}>소스 추가</span>
         </button>
     )
 }
 
 function SourceSearchBox() {
     return (
-        <div className="border border-[#37383B] rounded-lg p-3 bg-[#1A1D22] flex flex-col gap-3">
+        <div className="border border-border rounded-lg p-3 bg-bg flex flex-col gap-3">
             <div className="flex flex-row gap-2 items-center">
                 <Search className="size-4 text-white/60" strokeWidth={2} />
                 <input
