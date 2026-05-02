@@ -1,4 +1,4 @@
-import { Check, FileSpreadsheet, FileText, MoveRight, Network, PanelRight, Plus, Search } from "lucide-react";
+import { ArrowUp, Check, FileSpreadsheet, FileText, MoveRight, Network, PanelRight, Paperclip, Plus, RefreshCw, Search, Sparkles } from "lucide-react";
 import Panel from "./Panel";
 
 type SourceAddButtonProps = {
@@ -139,14 +139,110 @@ function LeftPanel({ }: LeftPanelProps) {
     )
 }
 
+function BotMessage() {
+    return (
+        <div className="flex gap-3">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/20">
+                <Sparkles className="size-4 text-emerald-400" strokeWidth={2} />
+            </div>
+            <div className="flex flex-1 flex-col gap-3 text-sm leading-relaxed text-white/90">
+                <p>
+                    외부 의견(Sounding) 신청 후 구조화하여 정리한 슬라이드와 함께
+                    LLM의 응답을 다음과 같이 정리했습니다.
+                </p>
+                <h3 className="text-base font-bold text-white">
+                    Slide 5. UI/UX 개선 및 향후 로드맵
+                </h3>
+                <ul className="flex list-disc flex-col gap-2 pl-5">
+                    <li>
+                        <span className="font-semibold text-white">모바일 최적화</span>
+                        : 다양한 화면 크기에 대응하여 사용성 개선
+                    </li>
+                    <li>
+                        <span className="font-semibold text-white">음성 인식 정확도 개선</span>
+                        : 다국어 환경에서의 정확도 향상을 위한 모델(Llama, Gemma 등) 평가
+                    </li>
+                    <li>
+                        <span className="font-semibold text-white">음성 기반 LLM 응답</span>
+                        : 음성을 자연스럽게 처리하는 LLM 응답 시스템 도입
+                    </li>
+                    <li>
+                        <span className="font-semibold text-white">사용자 피드백 반영</span>
+                        : 베타 사용자의 의견을 빠르게 수집·반영하는 사이클 구축
+                    </li>
+                </ul>
+            </div>
+        </div>
+    )
+}
+
+function UserMessage() {
+    return (
+        <div className="flex justify-end">
+            <div className="max-w-[80%] rounded-2xl bg-[#2d3137] px-4 py-2.5">
+                <p className="text-sm text-white">
+                    이해를 돕기 위해 이번 슬라이드 내용을 좀 더 풀어서 다시 설명해주세요.
+                </p>
+            </div>
+        </div>
+    )
+}
+
+function ChatInput() {
+    return (
+        <div className="flex flex-col rounded-xl border border-[#37383B] bg-[#1A1D22]">
+            <input
+                className="border-none bg-transparent px-4 pt-3 pb-2 text-sm text-white outline-none placeholder:text-white/40"
+                placeholder="무엇이든 물어보세요"
+            />
+            <div className="flex items-center justify-between px-3 pb-2">
+                <button
+                    type="button"
+                    onClick={() => { }}
+                    className="flex items-center gap-1.5 rounded-full px-2 py-1 text-xs text-white/60 hover:bg-white/5"
+                >
+                    <Paperclip className="size-3.5" strokeWidth={2} />
+                    <span>출처 4개</span>
+                </button>
+                <button
+                    type="button"
+                    onClick={() => { }}
+                    className="flex size-7 items-center justify-center rounded-full bg-emerald-500 hover:bg-emerald-600"
+                >
+                    <ArrowUp className="size-4 text-black" strokeWidth={2.5} />
+                </button>
+            </div>
+        </div>
+    )
+}
+
 type CenterPanelProps = {
     className?: string;
 }
 
 function CenterPanel({ }: CenterPanelProps) {
     return (
-        <Panel className="flex-1" title="출처" buttonArea={<img src="/icons/arrow-right.svg" alt="arrow-right" className="w-4 h-4" />}>
-            <div>센터</div>
+        <Panel
+            className="flex-1"
+            title="채팅"
+            buttonArea={
+                <button type="button" onClick={() => { }} className="text-white/70 hover:text-white">
+                    <RefreshCw className="size-4" strokeWidth={2} />
+                </button>
+            }
+        >
+            <div className="flex h-full flex-col">
+                <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-4">
+                    <BotMessage />
+                    <UserMessage />
+                </div>
+                <div className="flex flex-col gap-2 p-4">
+                    <ChatInput />
+                    <p className="text-center text-xs text-white/40">
+                        Roundtable AI는 부정확한 정보를 제공할 수 있으므로 중요한 정보는 재차 확인하세요.
+                    </p>
+                </div>
+            </div>
         </Panel>
     )
 }
