@@ -1,4 +1,5 @@
-import { ArrowUp, Check, FileSpreadsheet, FileText, Headphones, MoveRight, Network, PanelLeft, PanelRight, Paperclip, Play, Plus, RefreshCw, Search, Sparkles, StickyNote, Video } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { ArrowUp, AudioLines, BarChart3, Check, ChevronRight, FileSpreadsheet, FileText, HelpCircle, Layers, MoveRight, Network, PanelLeft, PanelRight, Paperclip, Plus, Presentation, RefreshCw, Search, Sparkles, StickyNote, Table, Video } from "lucide-react";
 import Panel from "./Panel";
 
 type SourceAddButtonProps = {
@@ -245,45 +246,61 @@ function CenterPanel({ }: CenterPanelProps) {
     )
 }
 
-function StudioTab({ label, active }: { label: string; active: boolean }) {
+type ArtifactColor = 'blue' | 'yellow' | 'green' | 'pink' | 'orange' | 'cyan';
+
+const ARTIFACT_COLOR_MAP: Record<ArtifactColor, string> = {
+    blue: 'bg-sky-400/15 text-sky-300',
+    yellow: 'bg-amber-400/15 text-amber-300',
+    green: 'bg-emerald-400/15 text-emerald-300',
+    pink: 'bg-pink-400/15 text-pink-300',
+    orange: 'bg-orange-400/15 text-orange-300',
+    cyan: 'bg-cyan-400/15 text-cyan-300',
+}
+
+type Artifact = {
+    icon: LucideIcon;
+    label: string;
+    color: ArtifactColor;
+    beta?: boolean;
+    chevron?: boolean;
+}
+
+const ARTIFACTS: Artifact[] = [
+    { icon: AudioLines, label: 'AI 오디오 오버뷰', color: 'blue', chevron: true },
+    { icon: Presentation, label: '슬라이드 자료', color: 'yellow', beta: true, chevron: true },
+    { icon: Video, label: '동영상 개요', color: 'green', chevron: true },
+    { icon: Network, label: '마인드맵', color: 'pink' },
+    { icon: FileText, label: '보고서', color: 'yellow', chevron: true },
+    { icon: Layers, label: '플래시카드', color: 'orange', chevron: true },
+    { icon: HelpCircle, label: '퀴즈', color: 'cyan', chevron: true },
+    { icon: BarChart3, label: '인포그래픽', color: 'pink', beta: true, chevron: true },
+    { icon: Table, label: '데이터 표', color: 'blue', chevron: true },
+]
+
+function ArtifactCard({ icon: Icon, label, color, beta, chevron }: Artifact) {
     return (
         <button
             type="button"
             onClick={() => { }}
-            className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs ${active
-                ? 'border-white/80 bg-white/10 text-white'
-                : 'border-[#37383B] text-white/60 hover:bg-white/5'
-                }`}
+            className={`flex flex-col gap-2 rounded-xl border border-border p-2.5 text-left hover:bg-white/5 ${ARTIFACT_COLOR_MAP[color]}`}
         >
-            <span>{label}</span>
+            <div className="flex w-full items-start justify-between">
+                <div className={`flex size-4 shrink-0 items-center justify-center rounded-lg ${ARTIFACT_COLOR_MAP[color]}`}>
+                    <Icon className="size-4" strokeWidth={2} />
+                </div>
+                {chevron && (
+                    <ChevronRight className="size-4 shrink-0 text-white/40" strokeWidth={2} />
+                )}
+            </div>
+            <div className="flex min-w-0 items-center gap-1.5">
+                <span className="truncate text-xs text-white">{label}</span>
+                {beta && (
+                    <span className="shrink-0 rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-white/60">
+                        베타
+                    </span>
+                )}
+            </div>
         </button>
-    )
-}
-
-type OverviewCardProps = {
-    icon: React.ReactNode;
-    title: string;
-    subtitle: string;
-}
-
-function OverviewCard({ icon, title, subtitle }: OverviewCardProps) {
-    return (
-        <div className="flex items-center gap-3 rounded-xl border border-[#37383B] bg-[#1A1D22] p-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15">
-                {icon}
-            </div>
-            <div className="flex flex-1 flex-col">
-                <span className="text-sm text-white">{title}</span>
-                <span className="text-xs text-white/40">{subtitle}</span>
-            </div>
-            <button
-                type="button"
-                onClick={() => { }}
-                className="flex size-8 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"
-            >
-                <Play className="size-3.5 text-white" strokeWidth={2} fill="currentColor" />
-            </button>
-        </div>
     )
 }
 
@@ -322,21 +339,10 @@ function RightPanel({ }: RightPanelProps) {
             buttonArea={<PanelLeft className="size-4 text-white" strokeWidth={2} />}
         >
             <div className="flex h-full flex-col gap-4 overflow-y-auto p-4">
-                <div className="flex gap-2">
-                    <StudioTab label="오디오" active />
-                    <StudioTab label="Video" active={false} />
-                </div>
-                <div className="flex flex-col gap-2">
-                    <OverviewCard
-                        icon={<Headphones className="size-5 text-emerald-400" strokeWidth={2} />}
-                        title="Audio Overview"
-                        subtitle="대화형 요약 · 약 12분"
-                    />
-                    <OverviewCard
-                        icon={<Video className="size-5 text-emerald-400" strokeWidth={2} />}
-                        title="Video Overview"
-                        subtitle="시각 자료 요약 · 약 5분"
-                    />
+                <div className="grid grid-cols-2 gap-2">
+                    {ARTIFACTS.map((artifact) => (
+                        <ArtifactCard key={artifact.label} {...artifact} />
+                    ))}
                 </div>
                 <div className="flex flex-col gap-2">
                     <div className="flex items-center justify-between px-1">
