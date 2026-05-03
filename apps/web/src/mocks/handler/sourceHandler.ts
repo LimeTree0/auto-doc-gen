@@ -12,6 +12,18 @@ type Memo = {
     title: string;
 }
 
+type ApiResponse<T> = {
+    status: string;
+    data: T;
+    error: string | null;
+}
+
+const ok = <T>(data: T): ApiResponse<T> => ({
+    status: '200 OK',
+    data,
+    error: null,
+});
+
 const sources: Source[] = [
     { id: '1', name: 'AI 기능 개발일정 1.docx', type: 'docx', checked: true },
     { id: '2', name: 'LLM 개발 비교.xlsx', type: 'xlsx', checked: true },
@@ -29,11 +41,33 @@ const memos: Memo[] = [
     { id: '7', title: 'LLM 개발 우선순위 결정 회의' },
 ]
 
-export const handlers = [
-    http.get('/api/sources', () => {
-        return HttpResponse.json(sources);
+const inferType = (name: string): Source['type'] => {
+    const ext = name.split('.').pop()?.toLowerCase();
+    if (ext === 'docx' || ext === 'xlsx' || ext === 'pdf') {
+        return ext;
+    }
+    return 'pdf';
+}
+
+export const sourceHandlers = [
+    http.get('/api/v1/sources', () => {
+        return HttpResponse.json(ok(sources));
     }),
     http.get('/api/memos', () => {
         return HttpResponse.json(memos);
+    }),
+    http.post('/api/v1/sources', async ({ request }) => {
+        const formData = await request.formData();
+        const files = formData.getAll('files') as File[];
+
+        const newSources: Source[] = files.map((file) => ({
+            id: crypto.randomUUID(),
+            name: file.name,
+            type: inferType(file.name),
+            checked: true,
+        }));
+
+        sources.push(...newSources);
+        return HttpResponse.json(ok(newSources));
     }),
 ]

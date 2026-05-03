@@ -1,13 +1,15 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { LucideIcon } from "lucide-react";
 import { ArrowRight, ArrowUp, AudioLines, BarChart3, Check, ChevronDown, ChevronRight, FileSpreadsheet, FileText, Globe, HelpCircle, Layers, MoveRight, Network, PanelLeft, PanelRight, Paperclip, Plus, Presentation, RefreshCw, Search, Sparkles, StickyNote, Table, Video } from "lucide-react";
+import { useState } from "react";
 import FileUpload from "./FileUpload";
 import Panel from "./Panel";
 
 function SourceAddButton() {
     const textColor = 'text-[#ABABAB]';
+    const [open, setOpen] = useState(false);
     return (
-        <Dialog>
+        <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <button
                     type="button"
@@ -17,7 +19,7 @@ function SourceAddButton() {
                     <span className={`text-sm ${textColor}`}>소스 추가</span>
                 </button>
             </DialogTrigger>
-            <SourceAddDialog />
+            <SourceAddDialog onUploadStart={() => setOpen(false)} />
         </Dialog>
     )
 }
@@ -122,7 +124,11 @@ function SourceListItem({ file }: { file: SourceFile }) {
     )
 }
 
-function SourceAddDialog() {
+type SourceAddDialogProps = {
+    onUploadStart?: () => void;
+}
+
+function SourceAddDialog({ onUploadStart }: SourceAddDialogProps = {}) {
     const used = 3;
     const total = 50;
     const percent = Math.min(100, Math.round((used / total) * 100));
@@ -178,7 +184,7 @@ function SourceAddDialog() {
                     </button>
                 </div>
             </div>
-            <FileUpload />
+            <FileUpload onUploadStart={onUploadStart} />
             <div className="flex items-center gap-3">
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#37383B]">
                     <div
