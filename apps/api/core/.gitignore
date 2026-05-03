@@ -37,4 +37,4 @@ out/
 .vscode/
 
 ## uploads ##
-./uploads
+./uploads/*
