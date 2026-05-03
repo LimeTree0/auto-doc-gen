@@ -1,6 +1,7 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { LucideIcon } from "lucide-react";
-import { ArrowRight, ArrowUp, AudioLines, BarChart3, Check, ChevronDown, ChevronRight, ClipboardPaste, FileSpreadsheet, FileText, Globe, HardDrive, HelpCircle, Layers, Link2, MoveRight, Network, PanelLeft, PanelRight, Paperclip, Plus, Presentation, RefreshCw, Search, Sparkles, StickyNote, Table, Upload, Video } from "lucide-react";
+import { ArrowRight, ArrowUp, AudioLines, BarChart3, Check, ChevronDown, ChevronRight, FileSpreadsheet, FileText, Globe, HelpCircle, Layers, MoveRight, Network, PanelLeft, PanelRight, Paperclip, Plus, Presentation, RefreshCw, Search, Sparkles, StickyNote, Table, Video } from "lucide-react";
+import FileUpload from "./FileUpload";
 import Panel from "./Panel";
 
 function SourceAddButton() {
@@ -121,32 +122,6 @@ function SourceListItem({ file }: { file: SourceFile }) {
     )
 }
 
-type SourceUploadButton = {
-    icon: LucideIcon;
-    label: string;
-    iconClassName?: string;
-}
-
-const SOURCE_UPLOAD_BUTTONS: SourceUploadButton[] = [
-    { icon: Upload, label: '파일 업로드' },
-    { icon: Link2, label: '웹사이트', iconClassName: 'text-rose-400' },
-    { icon: HardDrive, label: 'Drive', iconClassName: 'text-sky-400' },
-    { icon: ClipboardPaste, label: '복사된 텍스트' },
-]
-
-function SourceUploadOptionButton({ icon: Icon, label, iconClassName }: SourceUploadButton) {
-    return (
-        <button
-            type="button"
-            onClick={() => { }}
-            className="flex items-center gap-1.5 rounded-full border border-[#37383B] bg-bg px-3 py-1.5 hover:bg-white/5"
-        >
-            <Icon className={`size-3.5 text-white ${iconClassName ?? ''}`} strokeWidth={2} />
-            <span className="text-xs text-white">{label}</span>
-        </button>
-    )
-}
-
 function SourceAddDialog() {
     const used = 3;
     const total = 50;
@@ -203,19 +178,7 @@ function SourceAddDialog() {
                     </button>
                 </div>
             </div>
-
-            <div className="rounded-xl border border-dashed border-[#37383B] bg-[#22262b]/40 px-6 py-10 flex flex-col items-center gap-5">
-                <div className="flex flex-col items-center gap-1">
-                    <span className="text-base text-white">또는 파일 드롭</span>
-                    <span className="text-xs text-white/50">PDF, 이미지, 문서, 오디오 등</span>
-                </div>
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                    {SOURCE_UPLOAD_BUTTONS.map((button) => (
-                        <SourceUploadOptionButton key={button.label} {...button} />
-                    ))}
-                </div>
-            </div>
-
+            <FileUpload />
             <div className="flex items-center gap-3">
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#37383B]">
                     <div
