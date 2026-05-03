@@ -1,0 +1,55 @@
+package com.limecoding.core.source.application;
+
+import com.limecoding.core.source.domain.Source;
+import com.limecoding.core.source.infrastructure.SourceJpaRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
+
+@Slf4j
+@RequiredArgsConstructor
+@Service
+public class SourceService {
+    private final SourceJpaRepository sourceJpaRepository;
+
+    public void uploadSources(List<MultipartFile> sources) {
+        for (MultipartFile source : sources) {
+            saveFile(source);
+            sourceJpaRepository.save(new Source(source.getOriginalFilename(), source.getOriginalFilename()));
+        }
+    }
+
+    public List<Source> getSources() {
+        List<Source> all = sourceJpaRepository.findAll();
+
+        log.info("all: {}", all);
+
+        return all;
+    }
+
+    private void saveFile(MultipartFile source) {
+        try {
+            Path uploadDirectory = Paths.get("uploads");
+            Files.createDirectories(uploadDirectory);
+
+            String filename = getSafeFilename(source.getOriginalFilename());
+
+            Path filePath = uploadDirectory.resolve(Objects.requireNonNull(filename));
+            source.transferTo(filePath);
+        } catch (Exception e) {
+            throw new RuntimeException("파일 저장 실패", e);
+        }
+    }
+
+    private String getSafeFilename(String originalFilename) {
+        return UUID.randomUUID() + "_" + originalFilename;
+    }
+}
