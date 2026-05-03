@@ -1,23 +1,23 @@
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { LucideIcon } from "lucide-react";
 import { ArrowRight, ArrowUp, AudioLines, BarChart3, Check, ChevronDown, ChevronRight, ClipboardPaste, FileSpreadsheet, FileText, Globe, HardDrive, HelpCircle, Layers, Link2, MoveRight, Network, PanelLeft, PanelRight, Paperclip, Plus, Presentation, RefreshCw, Search, Sparkles, StickyNote, Table, Upload, Video } from "lucide-react";
-import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Panel from "./Panel";
 
-type SourceAddButtonProps = {
-    onClick: () => void;
-}
-
-function SourceAddButton({ }: SourceAddButtonProps) {
+function SourceAddButton() {
     const textColor = 'text-[#ABABAB]';
     return (
-        <button
-            type="button"
-            onClick={() => { }}
-            className="flex w-full items-center justify-center gap-2 rounded-full border border-border px-4 py-2 hover:bg-white/5"
-        >
-            <Plus className={`size-4 ${textColor}`} strokeWidth={2} />
-            <span className={`text-sm ${textColor}`}>소스 추가</span>
-        </button>
+        <Dialog>
+            <DialogTrigger asChild>
+                <button
+                    type="button"
+                    className="flex w-full items-center justify-center gap-2 rounded-full border border-border px-4 py-2 hover:bg-white/5"
+                >
+                    <Plus className={`size-4 ${textColor}`} strokeWidth={2} />
+                    <span className={`text-sm ${textColor}`}>소스 추가</span>
+                </button>
+            </DialogTrigger>
+            <SourceAddDialog />
+        </Dialog>
     )
 }
 
@@ -139,7 +139,7 @@ function SourceUploadOptionButton({ icon: Icon, label, iconClassName }: SourceUp
         <button
             type="button"
             onClick={() => { }}
-            className="flex items-center gap-1.5 rounded-full border border-[#37383B] bg-[#1A1D22] px-3 py-1.5 hover:bg-white/5"
+            className="flex items-center gap-1.5 rounded-full border border-[#37383B] bg-bg px-3 py-1.5 hover:bg-white/5"
         >
             <Icon className={`size-3.5 text-white ${iconClassName ?? ''}`} strokeWidth={2} />
             <span className="text-xs text-white">{label}</span>
@@ -154,7 +154,7 @@ function SourceAddDialog() {
 
     return (
         <DialogContent
-            className="bg-[#1A1D22] text-white border border-[#37383B] ring-0 sm:max-w-2xl p-6 gap-5"
+            className="bg-bg text-white border border-[#37383B] ring-0 sm:max-w-2xl p-6 gap-5"
         >
             <DialogHeader className="items-center pt-2">
                 <DialogTitle className="text-center text-lg font-medium text-white">
@@ -178,7 +178,7 @@ function SourceAddDialog() {
                         <button
                             type="button"
                             onClick={() => { }}
-                            className="flex items-center gap-1 rounded-full border border-[#37383B] bg-[#1A1D22] px-3 py-1 hover:bg-white/5"
+                            className="flex items-center gap-1 rounded-full border border-[#37383B] bg-bg px-3 py-1 hover:bg-white/5"
                         >
                             <Globe className="size-3.5 text-white" strokeWidth={2} />
                             <span className="text-xs text-white">웹</span>
@@ -187,7 +187,7 @@ function SourceAddDialog() {
                         <button
                             type="button"
                             onClick={() => { }}
-                            className="flex items-center gap-1 rounded-full border border-[#37383B] bg-[#1A1D22] px-3 py-1 hover:bg-white/5"
+                            className="flex items-center gap-1 rounded-full border border-[#37383B] bg-bg px-3 py-1 hover:bg-white/5"
                         >
                             <Sparkles className="size-3.5 text-white" strokeWidth={2} />
                             <span className="text-xs text-white">Fast Research</span>
@@ -237,7 +237,7 @@ function LeftPanel({ }: LeftPanelProps) {
     return (
         <Panel className="w-[25vw]" title="출처" buttonArea={<PanelRight className="size-4 text-white" strokeWidth={2} />}>
             <div className="flex flex-col gap-3 p-4">
-                <SourceAddButton onClick={() => { }} />
+                <SourceAddButton />
                 <SourceSearchBox />
                 <div className="flex flex-col">
                     <SelectAllRow checked={SOURCE_FILES.every((f) => f.checked)} />
@@ -301,7 +301,7 @@ function UserMessage() {
 
 function ChatInput() {
     return (
-        <div className="flex flex-col rounded-xl border border-[#37383B] bg-[#1A1D22]">
+        <div className="flex flex-col rounded-xl border border-[#37383B] bg-bg">
             <input
                 className="border-none bg-transparent px-4 pt-3 pb-2 text-sm text-white outline-none placeholder:text-white/40"
                 placeholder="무엇이든 물어보세요"
@@ -428,7 +428,7 @@ function MemoItem({ title }: { title: string }) {
         <button
             type="button"
             onClick={() => { }}
-            className="flex w-full items-center gap-2 rounded-lg border border-[#37383B] bg-[#1A1D22] px-3 py-2.5 text-left hover:bg-white/5"
+            className="flex w-full items-center gap-2 rounded-lg border border-[#37383B] bg-bg px-3 py-2.5 text-left hover:bg-white/5"
         >
             <StickyNote className="size-4 shrink-0 text-amber-300" strokeWidth={2} />
             <span className="flex-1 truncate text-sm text-white">{title}</span>
