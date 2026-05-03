@@ -37,4 +37,7 @@ out/
 .vscode/
 
 ## uploads ##
-./uploads/*
+uploads/
+
+## Claude code ##
+.claude
