@@ -5,7 +5,13 @@
       "Bash(npm run *)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(npx msw *)"
+      "Bash(npx msw *)",
+      "PowerShell(npx shadcn@latest init --yes --base-color neutral)",
+      "PowerShell(npx shadcn@latest init --help)",
+      "PowerShell(npx shadcn@latest init -t vite -b radix --yes)",
+      "PowerShell(npx shadcn@latest init -t vite -b radix -p nova --yes --force)",
+      "PowerShell(npx shadcn@latest add dialog --yes)",
+      "PowerShell(npm run *)"
     ]
   }
 }
