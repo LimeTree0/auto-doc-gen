@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# MSW service worker (auto-generated)
+public/mockServiceWorker.js
+
 # Env
 .env
 .env.*
