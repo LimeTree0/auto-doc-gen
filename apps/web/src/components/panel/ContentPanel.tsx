@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { LucideIcon } from "lucide-react";
-import { ArrowRight, ArrowUp, AudioLines, BarChart3, Check, ChevronDown, ChevronRight, FileSpreadsheet, FileText, Globe, HelpCircle, Layers, MoveRight, Network, PanelLeft, PanelRight, Paperclip, Plus, Presentation, RefreshCw, Search, Sparkles, StickyNote, Table, Video } from "lucide-react";
-import { useState } from "react";
+import { ArrowRight, ArrowUp, AudioLines, BarChart3, Check, ChevronDown, ChevronRight, FileSpreadsheet, FileText, Files, Globe, HelpCircle, Layers, MoveRight, Network, PanelLeft, PanelRight, Paperclip, Pencil, Plus, Presentation, RefreshCw, Search, Sparkles, StickyNote, Table, Video, Wand2 } from "lucide-react";
+import { useState, type ComponentProps } from "react";
 import FileUpload from "./FileUpload";
 import Panel from "./Panel";
 
@@ -355,11 +355,15 @@ const ARTIFACTS: Artifact[] = [
     { icon: Table, label: '데이터 표', color: 'blue', chevron: true },
 ]
 
-function ArtifactCard({ icon: Icon, label, color, beta, chevron }: Artifact) {
+type ArtifactCardProps = Artifact & Omit<ComponentProps<'button'>, keyof Artifact>;
+
+function ArtifactCard({ icon: Icon, label, color, beta, chevron, ref, onClick, ...rest }: ArtifactCardProps) {
     return (
         <button
+            ref={ref}
             type="button"
-            onClick={() => { }}
+            onClick={onClick ?? (() => { })}
+            {...rest}
             className={`flex flex-col gap-2 rounded-xl border border-border p-2.5 text-left hover:bg-white/5 ${ARTIFACT_COLOR_MAP[color]}`}
         >
             <div className="flex w-full items-start justify-between">
@@ -379,6 +383,87 @@ function ArtifactCard({ icon: Icon, label, color, beta, chevron }: Artifact) {
                 )}
             </div>
         </button>
+    )
+}
+
+type ReportFormat = {
+    label: string;
+    description: string;
+    editable?: boolean;
+}
+
+const REPORT_FORMATS: ReportFormat[] = [
+    { label: '직접 만들기', description: '구조, 스타일, 어조 등을 지정하여 원하는 방식으로 보고서를 작성하세요.' },
+    { label: '브리핑 문서', description: '주요 인사이트와 인용문을 포함한 소스 개요', editable: true },
+    { label: '학습 가이드', description: '단답형 퀴즈, 추천 에세이 질문, 핵심 용어집', editable: true },
+    { label: '블로그 게시물', description: '읽기 쉬운 기사 형식으로 요약된 유용한 정보', editable: true },
+]
+
+const RECOMMENDED_FORMATS: ReportFormat[] = [
+    { label: '기술 제안서', description: 'LLM 노드 구조에서 에이전트 기반 반응형 아키텍처로의 전환을 위한 상세 제안서', editable: true },
+    { label: '제품 기능 명세서', description: '사용자별 개인 문서 업로드 및 필터링 기능을 포함한 지식 베이스 확장 명세서', editable: true },
+    { label: '개념 설명서', description: 'AI 에이전트가 복잡한 대화와 요약 작업을 처리하는 방식을 배우는 학습 도구', editable: true },
+    { label: '프로세스 안내서', description: '채팅 메모리와 지식 검색의 원리를 단계별로 이해하는 기초 가이드', editable: true },
+]
+
+function ReportFormatCard({ label, description, editable }: ReportFormat) {
+    return (
+        <button
+            type="button"
+            onClick={() => { }}
+            className="relative flex flex-col gap-3 rounded-xl bg-[#2c2a24] p-4 text-left hover:bg-[#34322b] min-h-[140px]"
+        >
+            {editable && (
+                <span className="absolute right-3 top-3 flex size-7 items-center justify-center rounded-full bg-white/5">
+                    <Pencil className="size-3.5 text-white/70" strokeWidth={2} />
+                </span>
+            )}
+            <span className="pr-10 text-base font-medium text-white">{label}</span>
+            <span className="text-xs leading-relaxed text-white/60">{description}</span>
+        </button>
+    )
+}
+
+function ReportDialog() {
+    return (
+        <DialogContent
+            className="bg-bg text-white border border-[#37383B] ring-0 sm:max-w-5xl p-0 gap-0 overflow-hidden"
+        >
+            <DialogHeader className="flex-row items-center gap-3 border-b border-[#37383B] px-6 py-4 space-y-0">
+                <div className="flex size-9 items-center justify-center rounded-lg bg-[#2c2a24]">
+                    <Files className="size-5 text-amber-200" strokeWidth={2} />
+                </div>
+                <DialogTitle className="text-lg font-medium text-white">
+                    보고서 생성
+                </DialogTitle>
+                <DialogDescription className="sr-only">
+                    원하는 보고서 형식을 선택하세요.
+                </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex flex-col gap-6 px-6 py-5">
+                <section className="flex flex-col gap-3">
+                    <h3 className="text-base font-semibold text-white">형식</h3>
+                    <div className="grid grid-cols-4 gap-3">
+                        {REPORT_FORMATS.map((format) => (
+                            <ReportFormatCard key={format.label} {...format} />
+                        ))}
+                    </div>
+                </section>
+
+                <section className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2">
+                        <Wand2 className="size-4 text-white" strokeWidth={2} />
+                        <h3 className="text-base font-semibold text-white">추천 형식</h3>
+                    </div>
+                    <div className="grid grid-cols-4 gap-3">
+                        {RECOMMENDED_FORMATS.map((format) => (
+                            <ReportFormatCard key={format.label} {...format} />
+                        ))}
+                    </div>
+                </section>
+            </div>
+        </DialogContent>
     )
 }
 
@@ -418,9 +503,19 @@ function RightPanel({ }: RightPanelProps) {
         >
             <div className="flex h-full flex-col gap-4 overflow-y-auto p-4">
                 <div className="grid grid-cols-2 gap-2">
-                    {ARTIFACTS.map((artifact) => (
-                        <ArtifactCard key={artifact.label} {...artifact} />
-                    ))}
+                    {ARTIFACTS.map((artifact) => {
+                        if (artifact.label === '보고서') {
+                            return (
+                                <Dialog key={artifact.label}>
+                                    <DialogTrigger asChild>
+                                        <ArtifactCard {...artifact} />
+                                    </DialogTrigger>
+                                    <ReportDialog />
+                                </Dialog>
+                            )
+                        }
+                        return <ArtifactCard key={artifact.label} {...artifact} />
+                    })}
                 </div>
                 <div className="flex flex-col gap-2">
                     <div className="flex items-center justify-between px-1">
