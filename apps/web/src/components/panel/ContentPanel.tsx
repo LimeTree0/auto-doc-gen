@@ -1,9 +1,10 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { LucideIcon } from "lucide-react";
-import { ArrowLeft, ArrowRight, ArrowUp, AudioLines, BarChart3, Check, ChevronDown, ChevronRight, FileSpreadsheet, FileText, Files, Globe, HelpCircle, Layers, Loader2, MoveRight, Network, PanelLeft, PanelRight, Paperclip, Pencil, Plus, Presentation, RefreshCw, Search, Sparkles, StickyNote, Table, Video, Wand2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowUp, AudioLines, BarChart3, Check, ChevronDown, ChevronRight, FileSpreadsheet, FileText, Files, Globe, HelpCircle, Layers, Loader2, MoreVertical, MoveRight, Network, PanelLeft, PanelRight, Paperclip, Pencil, Plus, Presentation, RefreshCw, Search, Sparkles, StickyNote, Table, Video, Wand2, X } from "lucide-react";
 import { createContext, useContext, useMemo, useRef, useState, type ComponentProps, type ReactNode } from "react";
-import { useCreateMemoMutation, useMemoHtmlQuery, useMemosQuery, type Memo } from "@/api/memo";
+import { downloadMemoDocx, useCreateMemoMutation, useMemoHtmlQuery, useMemosQuery, type Memo } from "@/api/memo";
 import { inferSourceType, useSourcesQuery, type SourceType } from "@/api/source";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import FileUpload from "./FileUpload";
 import Panel from "./Panel";
 
@@ -721,28 +722,92 @@ function memoTitle(memo: Memo): string {
     return firstLine.length > 40 ? `${firstLine.slice(0, 40)}…` : firstLine;
 }
 
+function timeAgo(iso: string): string {
+    const then = new Date(iso).getTime();
+    if (Number.isNaN(then)) return '';
+    const sec = Math.max(0, Math.floor((Date.now() - then) / 1000));
+    if (sec < 60) return `${sec}초 전`;
+    const min = Math.floor(sec / 60);
+    if (min < 60) return `${min}분 전`;
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return `${hr}시간 전`;
+    const day = Math.floor(hr / 24);
+    if (day < 30) return `${day}일 전`;
+    const mo = Math.floor(day / 30);
+    if (mo < 12) return `${mo}달 전`;
+    return `${Math.floor(mo / 12)}년 전`;
+}
+
 function MemoItem({ memo, onClick }: { memo: Memo; onClick?: () => void }) {
     const isInFlight = memo.status === 'PENDING' || memo.status === 'IN_PROGRESS';
     const isFailed = memo.status === 'FAILED';
-    const isClickable = !isInFlight && !isFailed;
+    const isCompleted = memo.status === 'COMPLETED';
+    const isClickable = isCompleted && Boolean(onClick);
+
+    const handleRowClick = () => {
+        if (isClickable) onClick?.();
+    };
+
+    const handleRowKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (!isClickable) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClick?.();
+        }
+    };
+
+    const handleDownload = async () => {
+        try {
+            await downloadMemoDocx(memo.id, `${memoTitle(memo)}.docx`);
+        } catch (err) {
+            console.error('docx 다운로드 실패', err);
+        }
+    };
+
+    const subtitle = `소스 ${memo.sourceIds.length}개 · ${timeAgo(memo.createdAt)}`;
 
     return (
-        <button
-            type="button"
-            onClick={isClickable ? onClick : () => { }}
-            disabled={isInFlight}
-            className="flex w-full items-center gap-2 rounded-lg border border-[#37383B] bg-bg px-3 py-2.5 text-left hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-70"
+        <div
+            role={isClickable ? 'button' : undefined}
+            tabIndex={isClickable ? 0 : undefined}
+            onClick={handleRowClick}
+            onKeyDown={handleRowKeyDown}
+            aria-disabled={isInFlight || undefined}
+            className={`flex w-full items-center gap-2 rounded-lg border border-[#37383B] bg-bg px-3 py-2.5 ${isClickable ? 'cursor-pointer hover:bg-white/5' : ''} ${isInFlight ? 'opacity-70' : ''}`}
         >
             {isInFlight ? (
                 <Loader2 className="size-4 shrink-0 animate-spin text-amber-300" strokeWidth={2} />
             ) : (
                 <StickyNote className="size-4 shrink-0 text-amber-300" strokeWidth={2} />
             )}
-            <span className="flex-1 truncate text-sm text-white">
-                {memoTitle(memo)}
-                {isFailed && <span className="ml-1 text-rose-400">(생성 실패)</span>}
-            </span>
-        </button>
+            <div className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate text-sm text-white">
+                    {memoTitle(memo)}
+                    {isFailed && <span className="ml-1 text-rose-400">(생성 실패)</span>}
+                </span>
+                <span className="truncate text-xs text-white/50">{subtitle}</span>
+            </div>
+            {isCompleted && (
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button
+                            type="button"
+                            onClick={(e) => e.stopPropagation()}
+                            aria-label="메모 메뉴 열기"
+                            className="flex size-7 shrink-0 items-center justify-center rounded-md text-white/60 hover:bg-white/10 hover:text-white"
+                        >
+                            <MoreVertical className="size-4" strokeWidth={2} />
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuItem onSelect={handleDownload}>
+                            <FileText className="size-4 text-white/80" strokeWidth={2} />
+                            <span>Docx로 내보내기</span>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            )}
+        </div>
     )
 }
 

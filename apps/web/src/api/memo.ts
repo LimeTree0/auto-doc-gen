@@ -105,3 +105,19 @@ export const useMemoHtmlQuery = (id: number | null) => {
         enabled: id != null,
     });
 }
+
+export const downloadMemoDocx = async (id: number, filename?: string): Promise<void> => {
+    const response = await fetch(`${MEMOS_URL}/${id}/docx`);
+    if (!response.ok) {
+        throw new Error(`Failed to download docx (${response.status})`);
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename ?? `memo-${id}.docx`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+}
