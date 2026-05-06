@@ -53,6 +53,40 @@ export const memoHandlers = [
         if (!memo) return error(404, 'Memo not found');
         return HttpResponse.json(ok(memo));
     }),
+    http.get('/api/v1/memos/:id/html', ({ params }) => {
+        const id = Number(params.id);
+        const memo = memos.find((m) => m.id === id);
+        if (!memo) return error(404, 'Memo not found');
+        if (memo.status === 'PENDING' || memo.status === 'IN_PROGRESS') {
+            return error(409, '아직 생성 중입니다');
+        }
+        if (memo.status === 'FAILED') {
+            return error(410, '생성에 실패하였습니다');
+        }
+
+        const firstLine = memo.prompt.split('\n')[0]?.trim() || `메모 ${memo.id}`;
+        const sourceList = memo.sourceIds.map((sid) => `<li>소스 #${sid}</li>`).join('');
+        const html = `<article>
+  <h1>${firstLine}</h1>
+  <p>본 보고서는 선택된 소스를 바탕으로 자동 생성된 초안입니다. 작성일자는 ${memo.createdAt.slice(0, 10)}이며, 작성된 프롬프트는 "${memo.prompt}" 입니다.</p>
+  <h2>1. 개요</h2>
+  <p>이 섹션에서는 핵심 주제를 요약하고, 분석에 활용된 자료의 범위와 한계를 간략하게 정리합니다. 본문에 등장하는 모든 인용은 아래 소스 목록을 참고하시기 바랍니다.</p>
+  <h2>2. 주요 내용</h2>
+  <p>다음과 같은 항목들이 핵심으로 도출되었습니다.</p>
+  <ul>
+    <li>주요 인사이트 1: 데이터에 기반한 우선 과제 식별</li>
+    <li>주요 인사이트 2: 사용자 피드백과 정량 지표의 정합성 확인</li>
+    <li>주요 인사이트 3: 다음 분기 액션 아이템 도출</li>
+  </ul>
+  <h2>3. 참고 소스</h2>
+  <p>본 메모를 생성하는 데 활용된 소스의 식별자는 다음과 같습니다.</p>
+  <ul>${sourceList}</ul>
+  <h2>4. 제언</h2>
+  <p>위 분석을 바탕으로, 후속 작업에서는 인용된 소스를 직접 검토하여 세부 사항을 보강하는 것을 권장합니다.</p>
+</article>`;
+
+        return HttpResponse.json(ok(html));
+    }),
     http.post('/api/v1/memos', async ({ request }) => {
         const formData = await request.formData();
         const sourceIds = formData.getAll('sourceIds').map((v) => Number(v));

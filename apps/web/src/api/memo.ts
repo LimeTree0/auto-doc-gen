@@ -86,3 +86,16 @@ export const useCreateMemoMutation = () => {
         },
     });
 }
+
+export const getMemoHtml = async (id: number): Promise<string> => {
+    const response = await fetch(`${MEMOS_URL}/${id}/html`);
+    return unwrap<string>(response, 'Failed to fetch memo html');
+}
+
+export const useMemoHtmlQuery = (id: number | null) => {
+    return useQuery({
+        queryKey: ['memos', id, 'html'] as const,
+        queryFn: () => getMemoHtml(id as number),
+        enabled: id != null,
+    });
+}

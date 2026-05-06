@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import type { LucideIcon } from "lucide-react";
 import { ArrowLeft, ArrowRight, ArrowUp, AudioLines, BarChart3, Check, ChevronDown, ChevronRight, FileSpreadsheet, FileText, Files, Globe, HelpCircle, Layers, Loader2, MoveRight, Network, PanelLeft, PanelRight, Paperclip, Pencil, Plus, Presentation, RefreshCw, Search, Sparkles, StickyNote, Table, Video, Wand2, X } from "lucide-react";
 import { createContext, useContext, useMemo, useRef, useState, type ComponentProps, type ReactNode } from "react";
-import { useCreateMemoMutation, useMemosQuery, type Memo } from "@/api/memo";
+import { useCreateMemoMutation, useMemoHtmlQuery, useMemosQuery, type Memo } from "@/api/memo";
 import { inferSourceType, useSourcesQuery, type SourceType } from "@/api/source";
 import FileUpload from "./FileUpload";
 import Panel from "./Panel";
@@ -721,14 +721,15 @@ function memoTitle(memo: Memo): string {
     return firstLine.length > 40 ? `${firstLine.slice(0, 40)}…` : firstLine;
 }
 
-function MemoItem({ memo }: { memo: Memo }) {
+function MemoItem({ memo, onClick }: { memo: Memo; onClick?: () => void }) {
     const isInFlight = memo.status === 'PENDING' || memo.status === 'IN_PROGRESS';
     const isFailed = memo.status === 'FAILED';
+    const isClickable = !isInFlight && !isFailed;
 
     return (
         <button
             type="button"
-            onClick={() => { }}
+            onClick={isClickable ? onClick : () => { }}
             disabled={isInFlight}
             className="flex w-full items-center gap-2 rounded-lg border border-[#37383B] bg-bg px-3 py-2.5 text-left hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-70"
         >
@@ -749,7 +750,7 @@ type RightPanelProps = {
     className?: string;
 }
 
-function MemoList() {
+function MemoList({ onSelectMemo }: { onSelectMemo: (id: number) => void }) {
     const { data: memos, isLoading, error } = useMemosQuery();
 
     if (isLoading) {
@@ -767,42 +768,86 @@ function MemoList() {
     return (
         <div className="flex flex-col gap-2">
             {memos.map((memo) => (
-                <MemoItem key={memo.id} memo={memo} />
+                <MemoItem
+                    key={memo.id}
+                    memo={memo}
+                    onClick={memo.status === 'COMPLETED' ? () => onSelectMemo(memo.id) : undefined}
+                />
             ))}
         </div>
     )
 }
 
+function MemoDetailView({ memoId, onBack }: { memoId: number; onBack: () => void }) {
+    const { data: memos } = useMemosQuery();
+    const memo = memos?.find((m) => m.id === memoId);
+    const title = memo ? memoTitle(memo) : `메모 ${memoId}`;
+    const { data: html, isLoading, error } = useMemoHtmlQuery(memoId);
+
+    return (
+        <div className="flex h-full flex-col">
+            <div className="flex items-center gap-2 border-b border-[#37383B] px-4 py-3">
+                <button
+                    type="button"
+                    onClick={onBack}
+                    className="flex size-8 items-center justify-center rounded-md hover:bg-white/5"
+                    aria-label="뒤로"
+                >
+                    <ArrowLeft className="size-5 text-white" strokeWidth={2} />
+                </button>
+                <span className="flex-1 truncate text-sm font-medium text-white">{title}</span>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+                {isLoading && <span className="px-1 text-xs text-white/50">불러오는 중…</span>}
+                {error && <span className="px-1 text-xs text-rose-400">{error.message}</span>}
+                {html && (
+                    // 신뢰 경계: 현재 HTML은 MSW mock에서만 생성되며, 실제 BE 연동 시 sanitization 필요.
+                    <div
+                        className="text-sm text-white/90 leading-relaxed [&_h1]:text-lg [&_h1]:font-bold [&_h1]:my-3 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:my-3 [&_p]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_li]:my-1"
+                        dangerouslySetInnerHTML={{ __html: html }}
+                    />
+                )}
+            </div>
+        </div>
+    )
+}
+
 function RightPanel({ }: RightPanelProps) {
+    const [selectedMemoId, setSelectedMemoId] = useState<number | null>(null);
+
     return (
         <Panel
             className="h-full w-full"
             title="스튜디오"
             buttonArea={<PanelLeft className="size-4 text-white" strokeWidth={2} />}
         >
-            <div className="flex h-full flex-col gap-4 overflow-y-auto p-4">
-                <div className="grid grid-cols-2 gap-2">
-                    {ARTIFACTS.map((artifact) => {
-                        if (artifact.label === '보고서') {
-                            return <ReportArtifactCard key={artifact.label} artifact={artifact} />
-                        }
-                        return <ArtifactCard key={artifact.label} {...artifact} />
-                    })}
-                </div>
-                <div className="flex flex-col gap-2">
-                    <div className="flex items-center justify-between px-1">
-                        <span className="text-sm font-medium text-white">메모</span>
-                        <button
-                            type="button"
-                            onClick={() => { }}
-                            className="flex size-6 items-center justify-center rounded-full hover:bg-white/5"
-                        >
-                            <Plus className="size-4 text-white" strokeWidth={2} />
-                        </button>
+            {selectedMemoId != null ? (
+                <MemoDetailView memoId={selectedMemoId} onBack={() => setSelectedMemoId(null)} />
+            ) : (
+                <div className="flex h-full flex-col gap-4 overflow-y-auto p-4">
+                    <div className="grid grid-cols-2 gap-2">
+                        {ARTIFACTS.map((artifact) => {
+                            if (artifact.label === '보고서') {
+                                return <ReportArtifactCard key={artifact.label} artifact={artifact} />
+                            }
+                            return <ArtifactCard key={artifact.label} {...artifact} />
+                        })}
                     </div>
-                    <MemoList />
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between px-1">
+                            <span className="text-sm font-medium text-white">메모</span>
+                            <button
+                                type="button"
+                                onClick={() => { }}
+                                className="flex size-6 items-center justify-center rounded-full hover:bg-white/5"
+                            >
+                                <Plus className="size-4 text-white" strokeWidth={2} />
+                            </button>
+                        </div>
+                        <MemoList onSelectMemo={setSelectedMemoId} />
+                    </div>
                 </div>
-            </div>
+            )}
         </Panel>
     )
 }
