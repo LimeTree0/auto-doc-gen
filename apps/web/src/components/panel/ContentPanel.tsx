@@ -1,7 +1,8 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { LucideIcon } from "lucide-react";
-import { ArrowLeft, ArrowRight, ArrowUp, AudioLines, BarChart3, Check, ChevronDown, ChevronRight, FileSpreadsheet, FileText, Files, Globe, HelpCircle, Layers, MoveRight, Network, PanelLeft, PanelRight, Paperclip, Pencil, Plus, Presentation, RefreshCw, Search, Sparkles, StickyNote, Table, Video, Wand2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowUp, AudioLines, BarChart3, Check, ChevronDown, ChevronRight, FileSpreadsheet, FileText, Files, Globe, HelpCircle, Layers, Loader2, MoveRight, Network, PanelLeft, PanelRight, Paperclip, Pencil, Plus, Presentation, RefreshCw, Search, Sparkles, StickyNote, Table, Video, Wand2, X } from "lucide-react";
 import { createContext, useContext, useRef, useState, type ComponentProps, type ReactNode } from "react";
+import { useMemosQuery, type Memo } from "@/api/memo";
 import FileUpload from "./FileUpload";
 import Panel from "./Panel";
 
@@ -671,31 +672,56 @@ function ReportDialog() {
     )
 }
 
-const MEMOS: string[] = [
-    'AI 기능 개발 일정 변경',
-    '다국어 음성 인식 정확도 개선 방안',
-    'LLM 모델별 비용 효율성 비교 분석',
-    '사용자 피드백 기반 UI/UX 개선',
-    'AI 기능 출시 마일스톤 정리',
-    '회의록: 음성 코칭 프로젝트 킥오프',
-    'LLM 개발 우선순위 결정 회의',
-]
+function MemoItem({ memo }: { memo: Memo }) {
+    const isPending = memo.status === 'pending';
+    const isFailed = memo.status === 'failed';
 
-function MemoItem({ title }: { title: string }) {
     return (
         <button
             type="button"
             onClick={() => { }}
-            className="flex w-full items-center gap-2 rounded-lg border border-[#37383B] bg-bg px-3 py-2.5 text-left hover:bg-white/5"
+            disabled={isPending}
+            className="flex w-full items-center gap-2 rounded-lg border border-[#37383B] bg-bg px-3 py-2.5 text-left hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-70"
         >
-            <StickyNote className="size-4 shrink-0 text-amber-300" strokeWidth={2} />
-            <span className="flex-1 truncate text-sm text-white">{title}</span>
+            {isPending ? (
+                <Loader2 className="size-4 shrink-0 animate-spin text-amber-300" strokeWidth={2} />
+            ) : (
+                <StickyNote className="size-4 shrink-0 text-amber-300" strokeWidth={2} />
+            )}
+            <span className="flex-1 truncate text-sm text-white">
+                {memo.title}
+                {isFailed && <span className="ml-1 text-rose-400">(생성 실패)</span>}
+            </span>
         </button>
     )
 }
 
 type RightPanelProps = {
     className?: string;
+}
+
+function MemoList() {
+    const { data: memos, isLoading, error } = useMemosQuery();
+
+    if (isLoading) {
+        return <span className="px-1 text-xs text-white/50">불러오는 중…</span>;
+    }
+
+    if (error) {
+        return <span className="px-1 text-xs text-rose-400">메모를 불러오지 못했습니다.</span>;
+    }
+
+    if (!memos || memos.length === 0) {
+        return <span className="px-1 text-xs text-white/50">아직 메모가 없습니다.</span>;
+    }
+
+    return (
+        <div className="flex flex-col gap-2">
+            {memos.map((memo) => (
+                <MemoItem key={memo.id} memo={memo} />
+            ))}
+        </div>
+    )
 }
 
 function RightPanel({ }: RightPanelProps) {
@@ -732,11 +758,7 @@ function RightPanel({ }: RightPanelProps) {
                             <Plus className="size-4 text-white" strokeWidth={2} />
                         </button>
                     </div>
-                    <div className="flex flex-col gap-2">
-                        {MEMOS.map((title) => (
-                            <MemoItem key={title} title={title} />
-                        ))}
-                    </div>
+                    <MemoList />
                 </div>
             </div>
         </Panel>
