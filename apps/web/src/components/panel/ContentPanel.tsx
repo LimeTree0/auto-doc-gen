@@ -14,6 +14,8 @@ import {
 } from "@/api/memo";
 import {
   inferSourceType,
+  useAddSourceFromMemoMutation,
+  usePendingMemoConversionIds,
   useSourcesQuery,
   type SourceType,
 } from "@/api/source";
@@ -361,8 +363,30 @@ type LeftPanelProps = {
   className?: string;
 };
 
+function PendingSourceRow({ title }: { title: string }) {
+  return (
+    <div className="flex w-full items-center gap-2 rounded-md px-2 py-2 opacity-70">
+      <Loader2
+        className="size-4 shrink-0 animate-spin text-white/60"
+        strokeWidth={2}
+      />
+      <span className="flex-1 truncate text-left text-sm text-white/80">
+        {title}
+      </span>
+      <span className="shrink-0 text-xs text-white/40">업로드 중…</span>
+    </div>
+  );
+}
+
 function LeftPanel({}: LeftPanelProps) {
   const { files, allChecked, toggleAll, toggleOne } = useSources();
+  const pendingMemoIds = usePendingMemoConversionIds();
+  const { data: memos } = useMemosQuery();
+
+  const pendingTitle = (memoId: number) => {
+    const memo = memos?.find((m) => m.id === memoId);
+    return memo ? memoTitle(memo) : `메모 ${memoId}`;
+  };
 
   return (
     <Panel
@@ -375,6 +399,12 @@ function LeftPanel({}: LeftPanelProps) {
         <SourceSearchBox />
         <div className="flex flex-col">
           <SelectAllRow checked={allChecked} onToggle={toggleAll} />
+          {pendingMemoIds.map((memoId, idx) => (
+            <PendingSourceRow
+              key={`pending-memo-${memoId}-${idx}`}
+              title={pendingTitle(memoId)}
+            />
+          ))}
           {files.map((file) => (
             <SourceListItem
               key={file.id}
@@ -1121,6 +1151,7 @@ function MemoItem({ memo, onClick }: { memo: Memo; onClick?: () => void }) {
   const isFailed = memo.status === "FAILED";
   const isCompleted = memo.status === "COMPLETED";
   const isClickable = isCompleted && Boolean(onClick);
+  const { mutate: convertToSource } = useAddSourceFromMemoMutation();
 
   const handleRowClick = () => {
     if (isClickable) onClick?.();
@@ -1140,6 +1171,10 @@ function MemoItem({ memo, onClick }: { memo: Memo; onClick?: () => void }) {
     } catch (err) {
       console.error("docx 다운로드 실패", err);
     }
+  };
+
+  const handleConvertToSource = () => {
+    convertToSource({ memoId: memo.id });
   };
 
   const subtitle = `소스 ${memo.sourceIds.length}개 · ${timeAgo(memo.createdAt)}`;
@@ -1187,6 +1222,10 @@ function MemoItem({ memo, onClick }: { memo: Memo; onClick?: () => void }) {
             <DropdownMenuItem onSelect={handleDownload}>
               <FileText className="size-4 text-white/80" strokeWidth={2} />
               <span>Docx로 내보내기</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={handleConvertToSource}>
+              <Files className="size-4 text-white/80" strokeWidth={2} />
+              <span>소스로 변환</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

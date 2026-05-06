@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useMutation, useMutationState, useQueryClient, useQuery } from '@tanstack/react-query';
 
 export type SourceType = 'docx' | 'xlsx' | 'pdf';
 
@@ -80,4 +80,37 @@ export const useUploadSourcesMutation = () => {
             queryClient.invalidateQueries({ queryKey: sourceKeys.all });
         },
     });
+}
+
+export type AddSourceFromMemoVariables = { memoId: number };
+
+export const addSourceFromMemo = async ({ memoId }: AddSourceFromMemoVariables): Promise<AddSourceResponse> => {
+    const response = await fetch(`${SOURCES_URL}/from-memo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memoId }),
+    });
+    return unwrap<AddSourceResponse>(response, 'Failed to add source from memo');
+}
+
+export const sourceFromMemoMutationKey = ['source', 'fromMemo'] as const;
+
+export const useAddSourceFromMemoMutation = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationKey: sourceFromMemoMutationKey,
+        mutationFn: addSourceFromMemo,
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: sourceKeys.all });
+        },
+    });
+}
+
+export const usePendingMemoConversionIds = (): number[] => {
+    const variables = useMutationState({
+        filters: { mutationKey: sourceFromMemoMutationKey, status: 'pending' },
+        select: (m) => (m.state.variables as AddSourceFromMemoVariables | undefined)?.memoId,
+    });
+    return variables.filter((id): id is number => typeof id === 'number');
 }
