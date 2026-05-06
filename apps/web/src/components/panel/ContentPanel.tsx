@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { LucideIcon } from "lucide-react";
 import { ArrowLeft, ArrowRight, ArrowUp, AudioLines, BarChart3, Check, ChevronDown, ChevronRight, FileSpreadsheet, FileText, Files, Globe, HelpCircle, Layers, MoveRight, Network, PanelLeft, PanelRight, Paperclip, Pencil, Plus, Presentation, RefreshCw, Search, Sparkles, StickyNote, Table, Video, Wand2, X } from "lucide-react";
-import { useRef, useState, type ComponentProps } from "react";
+import { createContext, useContext, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import FileUpload from "./FileUpload";
 import Panel from "./Panel";
 
@@ -78,6 +78,43 @@ const SOURCE_FILES: SourceFile[] = [
     { name: '출시일정 정의서.pdf', type: 'pdf', checked: true },
 ]
 
+type SourceContextValue = {
+    files: SourceFile[];
+    selectedCount: number;
+    allChecked: boolean;
+    toggleAll: () => void;
+    toggleOne: (name: string) => void;
+}
+
+const SourceContext = createContext<SourceContextValue | null>(null);
+
+function SourceProvider({ children }: { children: ReactNode }) {
+    const [files, setFiles] = useState<SourceFile[]>(SOURCE_FILES);
+    const allChecked = files.length > 0 && files.every((f) => f.checked);
+    const selectedCount = files.filter((f) => f.checked).length;
+
+    const toggleAll = () => {
+        const next = !allChecked;
+        setFiles((prev) => prev.map((f) => ({ ...f, checked: next })));
+    };
+
+    const toggleOne = (name: string) => {
+        setFiles((prev) => prev.map((f) => (f.name === name ? { ...f, checked: !f.checked } : f)));
+    };
+
+    return (
+        <SourceContext.Provider value={{ files, selectedCount, allChecked, toggleAll, toggleOne }}>
+            {children}
+        </SourceContext.Provider>
+    )
+}
+
+function useSources() {
+    const ctx = useContext(SourceContext);
+    if (!ctx) throw new Error('useSources must be used within SourceProvider');
+    return ctx;
+}
+
 function FileTypeIcon({ type }: { type: SourceFile['type'] }) {
     if (type === 'xlsx') return <FileSpreadsheet className="size-4 text-emerald-400" strokeWidth={2} />
     if (type === 'pdf') return <FileText className="size-4 text-rose-400" strokeWidth={2} />
@@ -97,11 +134,11 @@ function SourceCheckbox({ checked }: { checked: boolean }) {
     )
 }
 
-function SelectAllRow({ checked }: { checked: boolean }) {
+function SelectAllRow({ checked, onToggle }: { checked: boolean; onToggle: () => void }) {
     return (
         <button
             type="button"
-            onClick={() => { }}
+            onClick={onToggle}
             className="flex w-full items-center justify-end gap-2 rounded-md px-2 py-2 hover:bg-white/5"
         >
             <span className="text-sm text-white">모두 선택</span>
@@ -110,11 +147,11 @@ function SelectAllRow({ checked }: { checked: boolean }) {
     )
 }
 
-function SourceListItem({ file }: { file: SourceFile }) {
+function SourceListItem({ file, onToggle }: { file: SourceFile; onToggle: () => void }) {
     return (
         <button
             type="button"
-            onClick={() => { }}
+            onClick={onToggle}
             className="flex w-full items-center gap-2 rounded-md px-2 py-2 hover:bg-white/5"
         >
             <FileTypeIcon type={file.type} />
@@ -203,15 +240,17 @@ type LeftPanelProps = {
 }
 
 function LeftPanel({ }: LeftPanelProps) {
+    const { files, allChecked, toggleAll, toggleOne } = useSources();
+
     return (
         <Panel className="w-[25vw]" title="출처" buttonArea={<PanelRight className="size-4 text-white" strokeWidth={2} />}>
             <div className="flex flex-col gap-3 p-4">
                 <SourceAddButton />
                 <SourceSearchBox />
                 <div className="flex flex-col">
-                    <SelectAllRow checked={SOURCE_FILES.every((f) => f.checked)} />
-                    {SOURCE_FILES.map((file) => (
-                        <SourceListItem key={file.name} file={file} />
+                    <SelectAllRow checked={allChecked} onToggle={toggleAll} />
+                    {files.map((file) => (
+                        <SourceListItem key={file.name} file={file} onToggle={() => toggleOne(file.name)} />
                     ))}
                 </div>
             </div>
@@ -269,6 +308,7 @@ function UserMessage() {
 }
 
 function ChatInput() {
+    const { selectedCount } = useSources();
     return (
         <div className="flex flex-col rounded-xl border border-[#37383B] bg-bg">
             <input
@@ -282,7 +322,7 @@ function ChatInput() {
                     className="flex items-center gap-1.5 rounded-full px-2 py-1 text-xs text-white/60 hover:bg-white/5"
                 >
                     <Paperclip className="size-3.5" strokeWidth={2} />
-                    <span>출처 4개</span>
+                    <span>출처 {selectedCount}개</span>
                 </button>
                 <button
                     type="button"
@@ -703,5 +743,5 @@ function RightPanel({ }: RightPanelProps) {
     )
 }
 
-export { CenterPanel, LeftPanel, RightPanel, SourceAddDialog };
+export { CenterPanel, LeftPanel, RightPanel, SourceAddDialog, SourceProvider };
 
