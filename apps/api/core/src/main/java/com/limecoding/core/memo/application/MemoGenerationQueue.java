@@ -39,26 +39,52 @@ public class MemoGenerationQueue {
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
     public void enqueue(Long memoId) {
+        log.info("[Memo:{}] 큐에 적재", memoId);
         executor.submit(() -> run(memoId));
     }
 
     private void run(Long memoId) {
+        long startedAt = System.currentTimeMillis();
+        log.info("[Memo:{}] 워커 시작", memoId);
         try {
             processor.markInProgress(memoId);
             MemoSnapshot snapshot = processor.loadSnapshot(memoId);
+            log.info("[Memo:{}] IN_PROGRESS 전환 완료, sourceIds={}, template={}",
+                    memoId, snapshot.sourceIds(), snapshot.templateOriginalName());
 
+            long stepAt = System.currentTimeMillis();
             String summary = summarizeSources(snapshot.sourceIds());
+            log.info("[Memo:{}] (1/4) 소스 요약 완료, 길이={}자, {}ms",
+                    memoId, summary.length(), System.currentTimeMillis() - stepAt);
+
+            stepAt = System.currentTimeMillis();
+            log.info("[Memo:{}] (2/4) 템플릿 HTML 변환 시작: storedName={}, originalName={}",
+                    memoId, snapshot.templateStoredName(), snapshot.templateOriginalName());
             String htmlTemplate = convertTemplateToHtml(snapshot);
+            log.info("[Memo:{}] (2/4) 템플릿 HTML 변환 완료, 길이={}자, {}ms",
+                    memoId, htmlTemplate.length(), System.currentTimeMillis() - stepAt);
+
+            stepAt = System.currentTimeMillis();
             String filledHtml = fillTemplate(htmlTemplate, summary, snapshot);
+            log.info("[Memo:{}] (3/4) 템플릿 채우기 완료, 길이={}자, {}ms",
+                    memoId, filledHtml.length(), System.currentTimeMillis() - stepAt);
+
+            stepAt = System.currentTimeMillis();
             String storedName = persistResult(filledHtml);
+            log.info("[Memo:{}] (4/4) 결과 HTML 저장 완료, file={}, {}ms",
+                    memoId, storedName, System.currentTimeMillis() - stepAt);
 
             processor.markCompleted(memoId, storedName);
-        } catch (Exception e) {
-            log.error("Memo 생성 실패: memoId={}", memoId, e);
+            log.info("[Memo:{}] COMPLETED, 총 {}ms", memoId, System.currentTimeMillis() - startedAt);
+        } catch (Throwable t) {
+            log.error("[Memo:{}] 생성 실패, 총 {}ms", memoId, System.currentTimeMillis() - startedAt, t);
             try {
                 processor.markFailed(memoId);
-            } catch (Exception ex) {
-                log.error("Memo FAILED 마킹 실패: memoId={}", memoId, ex);
+            } catch (Throwable ex) {
+                log.error("[Memo:{}] FAILED 마킹 실패", memoId, ex);
+            }
+            if (t instanceof Error) {
+                throw (Error) t;
             }
         }
     }
@@ -67,12 +93,15 @@ public class MemoGenerationQueue {
         List<GeminiInput> inputs = sourceIds.stream()
                 .map(this::loadAsGeminiInput)
                 .toList();
+        log.info("Gemini 호출 준비: input 개수={}", inputs.size());
         return geminiClient.generate(inputs, SUMMARY_PROMPT);
     }
 
     private GeminiInput loadAsGeminiInput(Long sourceId) {
         LoadedSource loaded = sourceService.loadSource(sourceId);
         SourceFormat format = SourceFormat.fromFilename(loaded.originalName());
+        log.info("소스 로드: id={}, name={}, format={}, bytes={}",
+                sourceId, loaded.originalName(), format, loaded.content().length);
         return switch (format) {
             case PDF -> GeminiInput.inlineData("application/pdf", loaded.content());
             case DOCX -> GeminiInput.text(documentApiClient.docxToHtml(loaded.content(), loaded.originalName()));
@@ -82,7 +111,9 @@ public class MemoGenerationQueue {
     }
 
     private String convertTemplateToHtml(MemoSnapshot snapshot) {
+        log.info("템플릿 파일 읽기: storedName={}", snapshot.templateStoredName());
         byte[] templateBytes = readUpload(snapshot.templateStoredName());
+        log.info("템플릿 파일 읽기 완료: {}bytes, docxToHtml 호출 진입", templateBytes.length);
         return documentApiClient.docxToHtml(templateBytes, snapshot.templateOriginalName());
     }
 

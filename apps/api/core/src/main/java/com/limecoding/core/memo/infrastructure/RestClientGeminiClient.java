@@ -39,6 +39,10 @@ public class RestClientGeminiClient implements GeminiClient {
                 "parts", buildParts(inputs)
         )));
 
+        boolean apiKeyPresent = properties.apiKey() != null && !properties.apiKey().isBlank();
+        log.info("Gemini 요청 시작: model={}, parts={}, apiKey={}",
+                properties.model(), inputs.size(), apiKeyPresent ? "set" : "MISSING");
+        long startedAt = System.currentTimeMillis();
         try {
             GenerateContentResponse response = restClient.post()
                     .uri("/models/{model}:generateContent?key={key}", properties.model(), properties.apiKey())
@@ -54,11 +58,14 @@ public class RestClientGeminiClient implements GeminiClient {
             if (content == null || content.parts() == null) {
                 throw new RuntimeException("Gemini 응답 본문이 비어 있습니다");
             }
-            return content.parts().stream()
+            String result = content.parts().stream()
                     .map(GenerateContentResponse.Part::text)
                     .filter(Objects::nonNull)
                     .collect(Collectors.joining());
+            log.info("Gemini 응답 수신: {}ms, 길이={}자", System.currentTimeMillis() - startedAt, result.length());
+            return result;
         } catch (RestClientException e) {
+            log.error("Gemini 호출 실패: {}ms, message={}", System.currentTimeMillis() - startedAt, e.getMessage());
             throw new RuntimeException("Gemini 호출 실패", e);
         }
     }

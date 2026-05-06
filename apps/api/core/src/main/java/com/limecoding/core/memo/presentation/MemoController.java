@@ -51,6 +51,14 @@ public class MemoController {
         return ApiResponse.success(GetMemoResponse.from(memoService.getMemo(id)));
     }
 
+    @GetMapping(value = "/{id}/html", produces = MediaType.TEXT_HTML_VALUE)
+    public ResponseEntity<String> html(@PathVariable Long id) {
+        String html = memoService.loadResultHtml(id);
+        return ResponseEntity.ok()
+                .contentType(MediaType.TEXT_HTML)
+                .body(html);
+    }
+
     @GetMapping("/{id}/docx")
     public ResponseEntity<byte[]> download(@PathVariable Long id) {
         byte[] data = memoService.downloadDocx(id);

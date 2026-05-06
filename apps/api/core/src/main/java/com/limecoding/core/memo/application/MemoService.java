@@ -4,6 +4,7 @@ import com.limecoding.core.memo.domain.Memo;
 import com.limecoding.core.memo.domain.MemoStatus;
 import com.limecoding.core.memo.infrastructure.MemoJpaRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -18,6 +19,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MemoService {
@@ -43,6 +45,8 @@ public class MemoService {
         String templateStoredName = saveTemplate(template, templateOriginalName);
 
         Memo memo = memoRepository.save(new Memo(sourceIds, prompt, templateStoredName, templateOriginalName));
+        log.info("Memo 생성 요청 수신: id={}, sourceIds={}, template={}, promptLen={}",
+                memo.getId(), sourceIds, templateOriginalName, prompt == null ? 0 : prompt.length());
         queue.enqueue(memo.getId());
         return memo;
     }
@@ -58,6 +62,14 @@ public class MemoService {
                 .orElseThrow(() -> new IllegalArgumentException("Memo not found: " + id));
     }
 
+    public String loadResultHtml(Long id) {
+        Memo memo = getMemo(id);
+        if (memo.getStatus() != MemoStatus.COMPLETED) {
+            throw new IllegalStateException("Memo가 아직 완료되지 않았습니다: " + memo.getStatus());
+        }
+        return new String(readUpload(memo.getResultStoredName()), StandardCharsets.UTF_8);
+    }
+
     public byte[] downloadDocx(Long id) {
         Memo memo = getMemo(id);
         if (memo.getStatus() != MemoStatus.COMPLETED) {
@@ -65,9 +77,11 @@ public class MemoService {
         }
 
         if (memo.getCachedDocxStoredName() != null) {
+            log.info("[Memo:{}] DOCX 캐시 hit: file={}", id, memo.getCachedDocxStoredName());
             return readUpload(memo.getCachedDocxStoredName());
         }
 
+        log.info("[Memo:{}] DOCX 캐시 miss, fill-docx-html 호출", id);
         byte[] templateBytes = readUpload(memo.getTemplateStoredName());
         String filledHtml = new String(readUpload(memo.getResultStoredName()), StandardCharsets.UTF_8);
         byte[] docxBytes = documentApiClient.fillDocxHtml(templateBytes, filledHtml, memo.getPrompt());
@@ -80,6 +94,7 @@ public class MemoService {
             throw new RuntimeException("DOCX 캐시 저장 실패", e);
         }
         processor.markDocxCached(id, cachedName);
+        log.info("[Memo:{}] DOCX 캐시 저장 완료: file={}, {}bytes", id, cachedName, docxBytes.length);
 
         return docxBytes;
     }
