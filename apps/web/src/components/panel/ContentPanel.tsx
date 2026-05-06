@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { LucideIcon } from "lucide-react";
-import { ArrowRight, ArrowUp, AudioLines, BarChart3, Check, ChevronDown, ChevronRight, FileSpreadsheet, FileText, Files, Globe, HelpCircle, Layers, MoveRight, Network, PanelLeft, PanelRight, Paperclip, Pencil, Plus, Presentation, RefreshCw, Search, Sparkles, StickyNote, Table, Video, Wand2 } from "lucide-react";
-import { useState, type ComponentProps } from "react";
+import { ArrowLeft, ArrowRight, ArrowUp, AudioLines, BarChart3, Check, ChevronDown, ChevronRight, FileSpreadsheet, FileText, Files, Globe, HelpCircle, Layers, MoveRight, Network, PanelLeft, PanelRight, Paperclip, Pencil, Plus, Presentation, RefreshCw, Search, Sparkles, StickyNote, Table, Video, Wand2, X } from "lucide-react";
+import { useRef, useState, type ComponentProps } from "react";
 import FileUpload from "./FileUpload";
 import Panel from "./Panel";
 
@@ -406,11 +406,15 @@ const RECOMMENDED_FORMATS: ReportFormat[] = [
     { label: '프로세스 안내서', description: '채팅 메모리와 지식 검색의 원리를 단계별로 이해하는 기초 가이드', editable: true },
 ]
 
-function ReportFormatCard({ label, description, editable }: ReportFormat) {
+type ReportFormatCardProps = ReportFormat & {
+    onClick?: () => void;
+}
+
+function ReportFormatCard({ label, description, editable, onClick }: ReportFormatCardProps) {
     return (
         <button
             type="button"
-            onClick={() => { }}
+            onClick={onClick}
             className="relative flex flex-col gap-3 rounded-xl bg-[#2c2a24] p-4 text-left hover:bg-[#34322b] min-h-[140px]"
         >
             {editable && (
@@ -424,11 +428,155 @@ function ReportFormatCard({ label, description, editable }: ReportFormat) {
     )
 }
 
-function ReportDialog() {
+const PROMPT_PLACEHOLDER = `예:
+
+새로운 웰니스 음료 출시를 위해 2026년 기능성 음료 시장에 관한 전문적인 경쟁 분석 리뷰를 작성해 줘. 어조는 분석적이고 전략적이어야 하고, 주요 경쟁사의 유통 및 가격 책정에 중점을 두고 출시 전략을 수립해 줘.`;
+
+const LANGUAGES = ['한국어 (기본)', 'English', '日本語', '中文 (简体)', 'Español'] as const;
+
+type ReportCreateViewProps = {
+    format: ReportFormat;
+    onBack: () => void;
+}
+
+function ReportCreateView({ format, onBack }: ReportCreateViewProps) {
+    const [language, setLanguage] = useState<string>(LANGUAGES[0]);
+    const [description, setDescription] = useState<string>('');
+    const [templateFiles, setTemplateFiles] = useState<File[]>([]);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const canSubmit = description.trim().length > 0;
+
+    const handleAddFiles = (files: FileList | null) => {
+        if (!files || files.length === 0) return;
+        const next = Array.from(files);
+        setTemplateFiles((prev) => [...prev, ...next]);
+    };
+
+    const handleRemoveFile = (index: number) => {
+        setTemplateFiles((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    const handleSubmit = () => {
+        if (!canSubmit) return;
+        // TODO: wire to backend — format, language, description, templateFiles
+        console.log('보고서 생성', { format: format.label, language, description, templateFiles });
+    };
+
     return (
-        <DialogContent
-            className="bg-bg text-white border border-[#37383B] ring-0 sm:max-w-5xl p-0 gap-0 overflow-hidden"
-        >
+        <>
+            <DialogHeader className="flex-row items-center gap-3 border-b border-[#37383B] px-6 py-4 space-y-0">
+                <button
+                    type="button"
+                    onClick={onBack}
+                    className="flex size-8 items-center justify-center rounded-md hover:bg-white/5"
+                    aria-label="뒤로"
+                >
+                    <ArrowLeft className="size-5 text-white" strokeWidth={2} />
+                </button>
+                <div className="flex size-9 items-center justify-center rounded-lg bg-[#2c2a24]">
+                    <Files className="size-5 text-amber-200" strokeWidth={2} />
+                </div>
+                <DialogTitle className="text-lg font-medium text-white">
+                    보고서 생성
+                </DialogTitle>
+                <DialogDescription className="sr-only">
+                    {format.label} 형식의 보고서를 생성합니다.
+                </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex flex-col gap-6 px-6 py-5">
+                <div className="flex flex-col gap-2">
+                    <label className="text-sm font-semibold text-white">언어를 선택하세요</label>
+                    <div className="relative">
+                        <select
+                            value={language}
+                            onChange={(e) => setLanguage(e.target.value)}
+                            className="w-full appearance-none rounded-lg border border-[#37383B] bg-bg px-4 py-3 pr-10 text-sm text-white outline-none hover:bg-white/5 focus:border-white/30"
+                        >
+                            {LANGUAGES.map((lang) => (
+                                <option key={lang} value={lang} className="bg-bg text-white">{lang}</option>
+                            ))}
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-white/60" strokeWidth={2} />
+                    </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                    <label className="text-sm font-semibold text-white">만들려는 보고서를 설명하세요</label>
+                    <div className="flex flex-col gap-2 rounded-lg border border-[#37383B] bg-bg px-4 py-3 focus-within:border-white/30">
+                        {templateFiles.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                                {templateFiles.map((file, index) => (
+                                    <span
+                                        key={`${file.name}-${index}`}
+                                        className="flex items-center gap-1.5 rounded-full border border-[#37383B] bg-[#2c2a24] py-1 pl-2 pr-1 text-xs text-white"
+                                    >
+                                        <FileText className="size-3.5 text-amber-200" strokeWidth={2} />
+                                        <span className="max-w-[200px] truncate">{file.name}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRemoveFile(index)}
+                                            className="flex size-4 items-center justify-center rounded-full hover:bg-white/10"
+                                            aria-label={`${file.name} 제거`}
+                                        >
+                                            <X className="size-3 text-white/70" strokeWidth={2} />
+                                        </button>
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                        <textarea
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            placeholder={PROMPT_PLACEHOLDER}
+                            rows={6}
+                            className="w-full resize-none border-none bg-transparent text-sm leading-relaxed text-white outline-none placeholder:whitespace-pre-line placeholder:text-white/40"
+                        />
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                    <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-1.5 rounded-full border border-[#37383B] px-3 py-1.5 text-xs text-white/80 hover:bg-white/5"
+                    >
+                        <Paperclip className="size-3.5" strokeWidth={2} />
+                        <span>양식 파일 첨부</span>
+                    </button>
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        className="hidden"
+                        onClick={(e) => {
+                            (e.currentTarget as HTMLInputElement).value = '';
+                        }}
+                        onChange={(e) => {
+                            handleAddFiles(e.target.files);
+                        }}
+                    />
+                    <button
+                        type="button"
+                        onClick={handleSubmit}
+                        disabled={!canSubmit}
+                        className={`rounded-full px-5 py-2 text-sm font-medium transition-colors ${canSubmit
+                            ? 'bg-emerald-500 text-black hover:bg-emerald-400'
+                            : 'bg-[#37383B] text-white/40'
+                            }`}
+                    >
+                        생성
+                    </button>
+                </div>
+            </div>
+        </>
+    )
+}
+
+function ReportSelectView({ onSelect }: { onSelect: (format: ReportFormat) => void }) {
+    return (
+        <>
             <DialogHeader className="flex-row items-center gap-3 border-b border-[#37383B] px-6 py-4 space-y-0">
                 <div className="flex size-9 items-center justify-center rounded-lg bg-[#2c2a24]">
                     <Files className="size-5 text-amber-200" strokeWidth={2} />
@@ -446,7 +594,7 @@ function ReportDialog() {
                     <h3 className="text-base font-semibold text-white">형식</h3>
                     <div className="grid grid-cols-4 gap-3">
                         {REPORT_FORMATS.map((format) => (
-                            <ReportFormatCard key={format.label} {...format} />
+                            <ReportFormatCard key={format.label} {...format} onClick={() => onSelect(format)} />
                         ))}
                     </div>
                 </section>
@@ -458,11 +606,27 @@ function ReportDialog() {
                     </div>
                     <div className="grid grid-cols-4 gap-3">
                         {RECOMMENDED_FORMATS.map((format) => (
-                            <ReportFormatCard key={format.label} {...format} />
+                            <ReportFormatCard key={format.label} {...format} onClick={() => onSelect(format)} />
                         ))}
                     </div>
                 </section>
             </div>
+        </>
+    )
+}
+
+function ReportDialog() {
+    const [selectedFormat, setSelectedFormat] = useState<ReportFormat | null>(null);
+
+    return (
+        <DialogContent
+            className="bg-bg text-white border border-[#37383B] ring-0 sm:max-w-5xl p-0 gap-0 overflow-hidden"
+        >
+            {selectedFormat ? (
+                <ReportCreateView format={selectedFormat} onBack={() => setSelectedFormat(null)} />
+            ) : (
+                <ReportSelectView onSelect={setSelectedFormat} />
+            )}
         </DialogContent>
     )
 }
