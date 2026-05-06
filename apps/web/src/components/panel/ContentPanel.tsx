@@ -261,7 +261,7 @@ function LeftPanel({ }: LeftPanelProps) {
     const { files, allChecked, toggleAll, toggleOne } = useSources();
 
     return (
-        <Panel className="w-[25vw]" title="출처" buttonArea={<PanelRight className="size-4 text-white" strokeWidth={2} />}>
+        <Panel className="h-full w-full" title="출처" buttonArea={<PanelRight className="size-4 text-white" strokeWidth={2} />}>
             <div className="flex flex-col gap-3 p-4">
                 <SourceAddButton />
                 <SourceSearchBox />
@@ -361,7 +361,7 @@ type CenterPanelProps = {
 function CenterPanel({ }: CenterPanelProps) {
     return (
         <Panel
-            className="flex-1"
+            className="h-full w-full"
             title="채팅"
             buttonArea={
                 <button type="button" onClick={() => { }} className="text-white/70 hover:text-white">
@@ -776,7 +776,7 @@ function MemoList() {
 function RightPanel({ }: RightPanelProps) {
     return (
         <Panel
-            className="w-[25vw]"
+            className="h-full w-full"
             title="스튜디오"
             buttonArea={<PanelLeft className="size-4 text-white" strokeWidth={2} />}
         >
