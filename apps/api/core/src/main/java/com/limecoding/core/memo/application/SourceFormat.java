@@ -6,6 +6,7 @@ public enum SourceFormat {
     PDF,
     DOCX,
     HWPX,
+    HTML,
     TEXT;
 
     public static SourceFormat fromFilename(String filename) {
@@ -16,8 +17,8 @@ public enum SourceFormat {
         if (lower.endsWith(".pdf")) return PDF;
         if (lower.endsWith(".docx")) return DOCX;
         if (lower.endsWith(".hwpx")) return HWPX;
-        if (lower.endsWith(".txt") || lower.endsWith(".md")
-                || lower.endsWith(".html") || lower.endsWith(".htm")) {
+        if (lower.endsWith(".html") || lower.endsWith(".htm")) return HTML;
+        if (lower.endsWith(".txt") || lower.endsWith(".md")) {
             return TEXT;
         }
         throw new IllegalArgumentException("지원하지 않는 파일 형식: " + filename);

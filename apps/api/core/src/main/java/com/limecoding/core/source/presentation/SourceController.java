@@ -2,6 +2,7 @@ package com.limecoding.core.source.presentation;
 
 import com.limecoding.core.common.ApiResponse;
 import com.limecoding.core.source.application.SourceService;
+import com.limecoding.core.source.presentation.dto.AddSourceFromMemoRequest;
 import com.limecoding.core.source.presentation.dto.AddSourceResponse;
 import com.limecoding.core.source.presentation.dto.GetSourceResponse;
 import lombok.RequiredArgsConstructor;
@@ -33,5 +34,12 @@ public class SourceController {
         sourceService.uploadSources(multipartFileList);
 
         return ApiResponse.success(AddSourceResponse.of(multipartFileList.size()));
+    }
+
+    @PostMapping("/from-memo")
+    public ApiResponse<AddSourceResponse> addFromMemo(@RequestBody AddSourceFromMemoRequest request) {
+        sourceService.uploadFromMemo(request.memoId());
+
+        return ApiResponse.success(AddSourceResponse.of(1));
     }
 }

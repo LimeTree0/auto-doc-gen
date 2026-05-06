@@ -26,6 +26,7 @@ public class SourceTextExtractor {
         return switch (format) {
             case PDF -> tika(content);
             case TEXT -> new String(content, StandardCharsets.UTF_8);
+            case HTML -> tika(content);
             case DOCX -> tika(documentApiClient.docxToHtml(content, originalName)
                     .getBytes(StandardCharsets.UTF_8));
             case HWPX -> tika(documentApiClient.hwpxToHtml(content, originalName)
