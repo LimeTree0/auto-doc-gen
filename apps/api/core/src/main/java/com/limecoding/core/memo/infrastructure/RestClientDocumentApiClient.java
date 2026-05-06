@@ -29,6 +29,13 @@ public class RestClientDocumentApiClient implements DocumentApiClient {
                 .build();
     }
 
+    private static HttpEntity<byte[]> filePart(String formName, String filename, byte[] content, MediaType contentType) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(contentType);
+        headers.setContentDispositionFormData(formName, filename);
+        return new HttpEntity<>(content, headers);
+    }
+
     @Override
     public String docxToHtml(byte[] docxBytes, String filename) {
         return convertToHtml("/api/documents/docx/to-html", docxBytes,
@@ -45,10 +52,12 @@ public class RestClientDocumentApiClient implements DocumentApiClient {
     public String fillHtmlTopic(String htmlTemplate, String contentText, String topic, String systemPrompt) {
         MultiValueMap<String, HttpEntity<?>> body = new LinkedMultiValueMap<>();
         body.add("template", filePart("template", "template.html", htmlTemplate.getBytes(StandardCharsets.UTF_8), MediaType.TEXT_HTML));
-        body.add("content", filePart("content", "content.md", contentText.getBytes(StandardCharsets.UTF_8), MediaType.TEXT_PLAIN));
+        body.add("content", filePart("content", "content.txt", contentText.getBytes(StandardCharsets.UTF_8), MediaType.TEXT_PLAIN));
 
         log.info("DocumentApi 요청: fill-topic, template={}자, content={}자, topic={}",
                 htmlTemplate.length(), contentText.length(), topic);
+        log.info("DocumentApi 컨텐츠 요청: content={}", contentText);
+
         long startedAt = System.currentTimeMillis();
         try {
             String result = restClient.post()
@@ -124,12 +133,5 @@ public class RestClientDocumentApiClient implements DocumentApiClient {
             log.error("DocumentApi 비정상 종료: {}, {}ms", path, System.currentTimeMillis() - startedAt, t);
             throw t;
         }
-    }
-
-    private static HttpEntity<byte[]> filePart(String formName, String filename, byte[] content, MediaType contentType) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(contentType);
-        headers.setContentDispositionFormData(formName, filename);
-        return new HttpEntity<>(content, headers);
     }
 }
