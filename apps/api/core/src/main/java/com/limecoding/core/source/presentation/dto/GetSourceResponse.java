@@ -8,10 +8,10 @@ import lombok.Getter;
 @AllArgsConstructor
 public class GetSourceResponse {
     private Long id;
-    private String name;
+    private String storedName;
     private String originalName;
 
     public static GetSourceResponse from(Source source) {
-        return new GetSourceResponse(source.getId(), source.getName(), source.getOriginalName());
+        return new GetSourceResponse(source.getId(), source.getStoredName(), source.getOriginalName());
     }
 }

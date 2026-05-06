@@ -18,11 +18,11 @@ public class Source {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String name;
+    private String storedName;
     private String originalName;
 
-    public Source(String name, String originalName) {
-        this.name = name;
+    public Source(String storedName, String originalName) {
+        this.storedName = storedName;
         this.originalName = originalName;
     }
 }
