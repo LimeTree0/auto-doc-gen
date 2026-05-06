@@ -23,7 +23,6 @@ public class MemoService {
     private final MemoJpaRepository memoRepository;
     private final MemoGenerationQueue queue;
 
-    @Transactional
     public Memo requestGeneration(List<Long> sourceIds, MultipartFile template, String prompt) {
         if (sourceIds == null || sourceIds.isEmpty()) {
             throw new IllegalArgumentException("소스 ID는 최소 1개 이상이어야 합니다");
