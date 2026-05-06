@@ -38,7 +38,10 @@ public class Memo {
     @Column(name = "source_id")
     private List<Long> sourceIds = new ArrayList<>();
 
+    private String templateStoredName;
+    private String templateOriginalName;
     private String resultStoredName;
+    private String cachedDocxStoredName;
     private LocalDateTime createdAt;
 
     public Memo(List<Long> sourceIds, String prompt) {
@@ -48,6 +51,12 @@ public class Memo {
         this.createdAt = LocalDateTime.now();
     }
 
+    public Memo(List<Long> sourceIds, String prompt, String templateStoredName, String templateOriginalName) {
+        this(sourceIds, prompt);
+        this.templateStoredName = templateStoredName;
+        this.templateOriginalName = templateOriginalName;
+    }
+
     public void markInProgress() {
         this.status = MemoStatus.IN_PROGRESS;
     }
@@ -55,6 +64,10 @@ public class Memo {
     public void markCompleted(String resultStoredName) {
         this.status = MemoStatus.COMPLETED;
         this.resultStoredName = resultStoredName;
+    }
+
+    public void markDocxCached(String cachedDocxStoredName) {
+        this.cachedDocxStoredName = cachedDocxStoredName;
     }
 
     public void markFailed() {
