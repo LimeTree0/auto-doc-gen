@@ -22,8 +22,8 @@ public class SourceService {
 
     public void uploadSources(List<MultipartFile> sources) {
         for (MultipartFile source : sources) {
-            saveFile(source);
-            sourceJpaRepository.save(new Source(source.getOriginalFilename(), source.getOriginalFilename()));
+            String storedName = saveFile(source);
+            sourceJpaRepository.save(new Source(storedName, source.getOriginalFilename()));
         }
     }
 
@@ -35,15 +35,27 @@ public class SourceService {
         return all;
     }
 
-    private void saveFile(MultipartFile source) {
+    public byte[] readSourceContent(Long sourceId) {
+        Source source = sourceJpaRepository.findById(sourceId)
+                .orElseThrow(() -> new IllegalArgumentException("Source not found: " + sourceId));
+        try {
+            return Files.readAllBytes(Paths.get("uploads").resolve(source.getStoredName()));
+        } catch (Exception e) {
+            throw new RuntimeException("소스 파일 읽기 실패: " + sourceId, e);
+        }
+    }
+
+    private String saveFile(MultipartFile source) {
         try {
             Path uploadDirectory = Paths.get("uploads");
             Files.createDirectories(uploadDirectory);
 
-            String filename = getSafeFilename(source.getOriginalFilename());
+            String storedName = getSafeFilename(source.getOriginalFilename());
 
-            Path filePath = uploadDirectory.resolve(Objects.requireNonNull(filename));
+            Path filePath = uploadDirectory.resolve(Objects.requireNonNull(storedName));
             source.transferTo(filePath);
+
+            return storedName;
         } catch (Exception e) {
             throw new RuntimeException("파일 저장 실패", e);
         }

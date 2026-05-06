@@ -2,7 +2,8 @@ package com.limecoding.core.source.presentation;
 
 import com.limecoding.core.common.ApiResponse;
 import com.limecoding.core.source.application.SourceService;
-import com.limecoding.core.source.domain.Source;
+import com.limecoding.core.source.presentation.dto.AddSourceResponse;
+import com.limecoding.core.source.presentation.dto.GetSourceResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -19,16 +20,18 @@ public class SourceController {
     private final SourceService sourceService;
 
     @GetMapping
-    public ApiResponse<List<Source>> getSources() {
-        List<Source> sources = sourceService.getSources();
+    public ApiResponse<List<GetSourceResponse>> getSources() {
+        List<GetSourceResponse> sources = sourceService.getSources().stream()
+                .map(GetSourceResponse::from)
+                .toList();
 
         return ApiResponse.success(sources);
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ApiResponse<String> addSource(@RequestPart("files") List<MultipartFile> multipartFileList) {
-
+    public ApiResponse<AddSourceResponse> addSource(@RequestPart("files") List<MultipartFile> multipartFileList) {
         sourceService.uploadSources(multipartFileList);
-        return ApiResponse.success("Source added successfully");
+
+        return ApiResponse.success(AddSourceResponse.of(multipartFileList.size()));
     }
 }
