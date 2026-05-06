@@ -8,6 +8,22 @@ spring:
         chat:
           options:
             model: ${GEMINI_CHAT_MODEL:gemini-2.5-flash}
+        embedding:
+          text:
+            options:
+              model: ${GEMINI_EMBEDDING_MODEL:gemini-embedding-001}
+              dimensions: 1536
+          api-key: ${GEMINI_API_KEY:}
+          location: ${GEMINI_EMBEDDING_LOCATION:us-central1}
+          vertex-ai: false
+    vectorstore:
+      pgvector:
+        initialize-schema: true
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        dimensions: 1536
+        table-name: source_chunk_embeddings
+        schema-name: public
 springdoc:
   api-docs:
     path: /api-docs

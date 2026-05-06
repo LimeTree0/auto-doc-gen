@@ -19,11 +19,13 @@ import java.util.UUID;
 @Service
 public class SourceService {
     private final SourceJpaRepository sourceJpaRepository;
+    private final SourceEmbeddingQueue embeddingQueue;
 
     public void uploadSources(List<MultipartFile> sources) {
         for (MultipartFile source : sources) {
             String storedName = saveFile(source);
-            sourceJpaRepository.save(new Source(storedName, source.getOriginalFilename()));
+            Source saved = sourceJpaRepository.save(new Source(storedName, source.getOriginalFilename()));
+            embeddingQueue.enqueue(saved.getId());
         }
     }
 
