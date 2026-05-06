@@ -88,8 +88,14 @@ export const useCreateMemoMutation = () => {
 }
 
 export const getMemoHtml = async (id: number): Promise<string> => {
-    const response = await fetch(`${MEMOS_URL}/${id}/html`);
-    return unwrap<string>(response, 'Failed to fetch memo html');
+    const response = await fetch(`${MEMOS_URL}/${id}/html`, {
+        headers: { Accept: 'text/html' },
+    });
+    if (!response.ok) {
+        const message = (await response.text()) || `Failed to fetch memo html (${response.status})`;
+        throw new Error(message);
+    }
+    return response.text();
 }
 
 export const useMemoHtmlQuery = (id: number | null) => {

@@ -56,12 +56,12 @@ export const memoHandlers = [
     http.get('/api/v1/memos/:id/html', ({ params }) => {
         const id = Number(params.id);
         const memo = memos.find((m) => m.id === id);
-        if (!memo) return error(404, 'Memo not found');
+        if (!memo) return new HttpResponse('Memo not found', { status: 404 });
         if (memo.status === 'PENDING' || memo.status === 'IN_PROGRESS') {
-            return error(409, '아직 생성 중입니다');
+            return new HttpResponse('아직 생성 중입니다', { status: 409 });
         }
         if (memo.status === 'FAILED') {
-            return error(410, '생성에 실패하였습니다');
+            return new HttpResponse('생성에 실패하였습니다', { status: 410 });
         }
 
         const firstLine = memo.prompt.split('\n')[0]?.trim() || `메모 ${memo.id}`;
@@ -85,7 +85,10 @@ export const memoHandlers = [
   <p>위 분석을 바탕으로, 후속 작업에서는 인용된 소스를 직접 검토하여 세부 사항을 보강하는 것을 권장합니다.</p>
 </article>`;
 
-        return HttpResponse.json(ok(html));
+        return new HttpResponse(html, {
+            status: 200,
+            headers: { 'Content-Type': 'text/html; charset=utf-8' },
+        });
     }),
     http.post('/api/v1/memos', async ({ request }) => {
         const formData = await request.formData();
