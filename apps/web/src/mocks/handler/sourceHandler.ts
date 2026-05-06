@@ -1,10 +1,13 @@
 import { http, HttpResponse } from 'msw';
 
 type Source = {
-    id: string;
-    name: string;
-    type: 'docx' | 'xlsx' | 'pdf';
-    checked: boolean;
+    id: number;
+    storedName: string;
+    originalName: string;
+}
+
+type AddSourceResponse = {
+    uploadedCount: number;
 }
 
 type ApiResponse<T> = {
@@ -14,25 +17,19 @@ type ApiResponse<T> = {
 }
 
 const ok = <T>(data: T): ApiResponse<T> => ({
-    status: '200 OK',
+    status: 'OK',
     data,
     error: null,
 });
 
-const sources: Source[] = [
-    { id: '1', name: 'AI 기능 개발일정 1.docx', type: 'docx', checked: true },
-    { id: '2', name: 'LLM 개발 비교.xlsx', type: 'xlsx', checked: true },
-    { id: '3', name: '음성코칭 프로젝트 정의서.pdf', type: 'pdf', checked: true },
-    { id: '4', name: '출시일정 정의서.pdf', type: 'pdf', checked: true },
-]
+let nextId = 5;
 
-const inferType = (name: string): Source['type'] => {
-    const ext = name.split('.').pop()?.toLowerCase();
-    if (ext === 'docx' || ext === 'xlsx' || ext === 'pdf') {
-        return ext;
-    }
-    return 'pdf';
-}
+export const sources: Source[] = [
+    { id: 1, storedName: 'stored-1.docx', originalName: 'AI 기능 개발일정 1.docx' },
+    { id: 2, storedName: 'stored-2.xlsx', originalName: 'LLM 개발 비교.xlsx' },
+    { id: 3, storedName: 'stored-3.pdf', originalName: '음성코칭 프로젝트 정의서.pdf' },
+    { id: 4, storedName: 'stored-4.pdf', originalName: '출시일정 정의서.pdf' },
+]
 
 export const sourceHandlers = [
     http.get('/api/v1/sources', () => {
@@ -42,14 +39,15 @@ export const sourceHandlers = [
         const formData = await request.formData();
         const files = formData.getAll('files') as File[];
 
-        const newSources: Source[] = files.map((file) => ({
-            id: crypto.randomUUID(),
-            name: file.name,
-            type: inferType(file.name),
-            checked: true,
-        }));
+        for (const file of files) {
+            sources.push({
+                id: nextId++,
+                storedName: `stored-${crypto.randomUUID()}-${file.name}`,
+                originalName: file.name,
+            });
+        }
 
-        sources.push(...newSources);
-        return HttpResponse.json(ok(newSources));
+        const response: AddSourceResponse = { uploadedCount: files.length };
+        return HttpResponse.json(ok(response));
     }),
 ]

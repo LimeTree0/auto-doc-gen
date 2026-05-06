@@ -1,8 +1,9 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { LucideIcon } from "lucide-react";
 import { ArrowLeft, ArrowRight, ArrowUp, AudioLines, BarChart3, Check, ChevronDown, ChevronRight, FileSpreadsheet, FileText, Files, Globe, HelpCircle, Layers, Loader2, MoveRight, Network, PanelLeft, PanelRight, Paperclip, Pencil, Plus, Presentation, RefreshCw, Search, Sparkles, StickyNote, Table, Video, Wand2, X } from "lucide-react";
-import { createContext, useContext, useRef, useState, type ComponentProps, type ReactNode } from "react";
-import { useMemosQuery, type Memo } from "@/api/memo";
+import { createContext, useContext, useMemo, useRef, useState, type ComponentProps, type ReactNode } from "react";
+import { useCreateMemoMutation, useMemosQuery, type Memo } from "@/api/memo";
+import { inferSourceType, useSourcesQuery, type SourceType } from "@/api/source";
 import FileUpload from "./FileUpload";
 import Panel from "./Panel";
 
@@ -67,44 +68,60 @@ function SourceSearchBox() {
 }
 
 type SourceFile = {
+    id: number;
     name: string;
-    type: 'docx' | 'xlsx' | 'pdf';
+    type: SourceType;
     checked: boolean;
 }
-
-const SOURCE_FILES: SourceFile[] = [
-    { name: 'AI 기능 개발일정 1.docx', type: 'docx', checked: true },
-    { name: 'LLM 개발 비교.xlsx', type: 'xlsx', checked: true },
-    { name: '음성코칭 프로젝트 정의서.pdf', type: 'pdf', checked: true },
-    { name: '출시일정 정의서.pdf', type: 'pdf', checked: true },
-]
 
 type SourceContextValue = {
     files: SourceFile[];
     selectedCount: number;
+    selectedIds: number[];
     allChecked: boolean;
     toggleAll: () => void;
-    toggleOne: (name: string) => void;
+    toggleOne: (id: number) => void;
 }
 
 const SourceContext = createContext<SourceContextValue | null>(null);
 
 function SourceProvider({ children }: { children: ReactNode }) {
-    const [files, setFiles] = useState<SourceFile[]>(SOURCE_FILES);
-    const allChecked = files.length > 0 && files.every((f) => f.checked);
+    const { data: sources } = useSourcesQuery();
+    const [uncheckedIds, setUncheckedIds] = useState<Set<number>>(new Set());
+
+    const files = useMemo<SourceFile[]>(() => {
+        if (!sources) return [];
+        return sources.map((s) => ({
+            id: s.id,
+            name: s.originalName,
+            type: inferSourceType(s.originalName),
+            checked: !uncheckedIds.has(s.id),
+        }));
+    }, [sources, uncheckedIds]);
+
     const selectedCount = files.filter((f) => f.checked).length;
+    const selectedIds = files.filter((f) => f.checked).map((f) => f.id);
+    const allChecked = files.length > 0 && files.every((f) => f.checked);
 
     const toggleAll = () => {
-        const next = !allChecked;
-        setFiles((prev) => prev.map((f) => ({ ...f, checked: next })));
+        if (allChecked) {
+            setUncheckedIds(new Set(files.map((f) => f.id)));
+        } else {
+            setUncheckedIds(new Set());
+        }
     };
 
-    const toggleOne = (name: string) => {
-        setFiles((prev) => prev.map((f) => (f.name === name ? { ...f, checked: !f.checked } : f)));
+    const toggleOne = (id: number) => {
+        setUncheckedIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
     };
 
     return (
-        <SourceContext.Provider value={{ files, selectedCount, allChecked, toggleAll, toggleOne }}>
+        <SourceContext.Provider value={{ files, selectedCount, selectedIds, allChecked, toggleAll, toggleOne }}>
             {children}
         </SourceContext.Provider>
     )
@@ -116,7 +133,7 @@ function useSources() {
     return ctx;
 }
 
-function FileTypeIcon({ type }: { type: SourceFile['type'] }) {
+function FileTypeIcon({ type }: { type: SourceType }) {
     if (type === 'xlsx') return <FileSpreadsheet className="size-4 text-emerald-400" strokeWidth={2} />
     if (type === 'pdf') return <FileText className="size-4 text-rose-400" strokeWidth={2} />
     return <FileText className="size-4 text-sky-400" strokeWidth={2} />
@@ -251,7 +268,7 @@ function LeftPanel({ }: LeftPanelProps) {
                 <div className="flex flex-col">
                     <SelectAllRow checked={allChecked} onToggle={toggleAll} />
                     {files.map((file) => (
-                        <SourceListItem key={file.name} file={file} onToggle={() => toggleOne(file.name)} />
+                        <SourceListItem key={file.id} file={file} onToggle={() => toggleOne(file.id)} />
                     ))}
                 </div>
             </div>
@@ -478,20 +495,26 @@ const LANGUAGES = ['한국어 (기본)', 'English', '日本語', '中文 (简体
 type ReportCreateViewProps = {
     format: ReportFormat;
     onBack: () => void;
+    onClose: () => void;
 }
 
-function ReportCreateView({ format, onBack }: ReportCreateViewProps) {
+function ReportCreateView({ format, onBack, onClose }: ReportCreateViewProps) {
     const [language, setLanguage] = useState<string>(LANGUAGES[0]);
     const [description, setDescription] = useState<string>('');
     const [templateFiles, setTemplateFiles] = useState<File[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const { selectedIds } = useSources();
+    const { mutate: createMemo, isPending, isError, reset } = useCreateMemoMutation();
 
-    const canSubmit = description.trim().length > 0;
+    const hasContent = description.trim().length > 0;
+    const hasTemplate = templateFiles.length > 0;
+    const hasSources = selectedIds.length > 0;
+    const canSubmit = hasContent && hasTemplate && hasSources && !isPending;
 
     const handleAddFiles = (files: FileList | null) => {
         if (!files || files.length === 0) return;
-        const next = Array.from(files);
-        setTemplateFiles((prev) => [...prev, ...next]);
+        setTemplateFiles([files[0]]);
+        if (isError) reset();
     };
 
     const handleRemoveFile = (index: number) => {
@@ -500,8 +523,10 @@ function ReportCreateView({ format, onBack }: ReportCreateViewProps) {
 
     const handleSubmit = () => {
         if (!canSubmit) return;
-        // TODO: wire to backend — format, language, description, templateFiles
-        console.log('보고서 생성', { format: format.label, language, description, templateFiles });
+        createMemo(
+            { sourceIds: selectedIds, template: templateFiles[0], prompt: description },
+            { onSuccess: () => onClose() },
+        );
     };
 
     return (
@@ -577,11 +602,12 @@ function ReportCreateView({ format, onBack }: ReportCreateViewProps) {
                     </div>
                 </div>
 
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-3">
                     <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="flex items-center gap-1.5 rounded-full border border-[#37383B] px-3 py-1.5 text-xs text-white/80 hover:bg-white/5"
+                        disabled={isPending}
+                        className="flex items-center gap-1.5 rounded-full border border-[#37383B] px-3 py-1.5 text-xs text-white/80 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         <Paperclip className="size-3.5" strokeWidth={2} />
                         <span>양식 파일 첨부</span>
@@ -589,7 +615,6 @@ function ReportCreateView({ format, onBack }: ReportCreateViewProps) {
                     <input
                         ref={fileInputRef}
                         type="file"
-                        multiple
                         className="hidden"
                         onClick={(e) => {
                             (e.currentTarget as HTMLInputElement).value = '';
@@ -598,17 +623,23 @@ function ReportCreateView({ format, onBack }: ReportCreateViewProps) {
                             handleAddFiles(e.target.files);
                         }}
                     />
-                    <button
-                        type="button"
-                        onClick={handleSubmit}
-                        disabled={!canSubmit}
-                        className={`rounded-full px-5 py-2 text-sm font-medium transition-colors ${canSubmit
-                            ? 'bg-emerald-500 text-black hover:bg-emerald-400'
-                            : 'bg-[#37383B] text-white/40'
-                            }`}
-                    >
-                        생성
-                    </button>
+                    <div className="flex items-center gap-3">
+                        {isError && (
+                            <span className="text-xs text-rose-400">보고서 생성에 실패하였습니다.</span>
+                        )}
+                        <button
+                            type="button"
+                            onClick={handleSubmit}
+                            disabled={!canSubmit}
+                            className={`flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium transition-colors ${canSubmit
+                                ? 'bg-emerald-500 text-black hover:bg-emerald-400'
+                                : 'bg-[#37383B] text-white/40'
+                                }`}
+                        >
+                            {isPending && <Loader2 className="size-3.5 animate-spin" strokeWidth={2} />}
+                            <span>{isPending ? '생성 중' : '생성'}</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </>
@@ -656,7 +687,7 @@ function ReportSelectView({ onSelect }: { onSelect: (format: ReportFormat) => vo
     )
 }
 
-function ReportDialog() {
+function ReportDialog({ onClose }: { onClose: () => void }) {
     const [selectedFormat, setSelectedFormat] = useState<ReportFormat | null>(null);
 
     return (
@@ -664,7 +695,7 @@ function ReportDialog() {
             className="bg-bg text-white border border-[#37383B] ring-0 sm:max-w-5xl p-0 gap-0 overflow-hidden"
         >
             {selectedFormat ? (
-                <ReportCreateView format={selectedFormat} onBack={() => setSelectedFormat(null)} />
+                <ReportCreateView format={selectedFormat} onBack={() => setSelectedFormat(null)} onClose={onClose} />
             ) : (
                 <ReportSelectView onSelect={setSelectedFormat} />
             )}
@@ -672,24 +703,42 @@ function ReportDialog() {
     )
 }
 
+function ReportArtifactCard({ artifact }: { artifact: Artifact }) {
+    const [open, setOpen] = useState(false);
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <ArtifactCard {...artifact} />
+            </DialogTrigger>
+            <ReportDialog onClose={() => setOpen(false)} />
+        </Dialog>
+    )
+}
+
+function memoTitle(memo: Memo): string {
+    const firstLine = memo.prompt.split('\n')[0]?.trim() ?? '';
+    if (firstLine.length === 0) return `메모 ${memo.id}`;
+    return firstLine.length > 40 ? `${firstLine.slice(0, 40)}…` : firstLine;
+}
+
 function MemoItem({ memo }: { memo: Memo }) {
-    const isPending = memo.status === 'pending';
-    const isFailed = memo.status === 'failed';
+    const isInFlight = memo.status === 'PENDING' || memo.status === 'IN_PROGRESS';
+    const isFailed = memo.status === 'FAILED';
 
     return (
         <button
             type="button"
             onClick={() => { }}
-            disabled={isPending}
+            disabled={isInFlight}
             className="flex w-full items-center gap-2 rounded-lg border border-[#37383B] bg-bg px-3 py-2.5 text-left hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-70"
         >
-            {isPending ? (
+            {isInFlight ? (
                 <Loader2 className="size-4 shrink-0 animate-spin text-amber-300" strokeWidth={2} />
             ) : (
                 <StickyNote className="size-4 shrink-0 text-amber-300" strokeWidth={2} />
             )}
             <span className="flex-1 truncate text-sm text-white">
-                {memo.title}
+                {memoTitle(memo)}
                 {isFailed && <span className="ml-1 text-rose-400">(생성 실패)</span>}
             </span>
         </button>
@@ -735,14 +784,7 @@ function RightPanel({ }: RightPanelProps) {
                 <div className="grid grid-cols-2 gap-2">
                     {ARTIFACTS.map((artifact) => {
                         if (artifact.label === '보고서') {
-                            return (
-                                <Dialog key={artifact.label}>
-                                    <DialogTrigger asChild>
-                                        <ArtifactCard {...artifact} />
-                                    </DialogTrigger>
-                                    <ReportDialog />
-                                </Dialog>
-                            )
+                            return <ReportArtifactCard key={artifact.label} artifact={artifact} />
                         }
                         return <ArtifactCard key={artifact.label} {...artifact} />
                     })}

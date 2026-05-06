@@ -1,10 +1,15 @@
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 
+export type SourceType = 'docx' | 'xlsx' | 'pdf';
+
 export type Source = {
-    id: string;
-    name: string;
-    type: 'docx' | 'xlsx' | 'pdf';
-    checked: boolean;
+    id: number;
+    storedName: string;
+    originalName: string;
+}
+
+export type AddSourceResponse = {
+    uploadedCount: number;
 }
 
 export type ApiResponse<T> = {
@@ -29,6 +34,12 @@ const unwrap = async <T>(response: Response, errorMessage: string): Promise<T> =
     return body.data;
 };
 
+export const inferSourceType = (name: string): SourceType => {
+    const ext = name.split('.').pop()?.toLowerCase();
+    if (ext === 'docx' || ext === 'xlsx' || ext === 'pdf') return ext;
+    return 'pdf';
+}
+
 export const getSources = async (): Promise<Source[]> => {
     const response = await fetch(SOURCES_URL);
     return unwrap<Source[]>(response, 'Failed to fetch sources');
@@ -45,7 +56,7 @@ export const useSourcesQuery = () => {
     });
 }
 
-export const uploadSources = async (files: File[]): Promise<Source[]> => {
+export const uploadSources = async (files: File[]): Promise<AddSourceResponse> => {
     const formData = new FormData();
 
     for (const file of files) {
@@ -57,7 +68,7 @@ export const uploadSources = async (files: File[]): Promise<Source[]> => {
         body: formData,
     });
 
-    return unwrap<Source[]>(response, 'Failed to upload sources');
+    return unwrap<AddSourceResponse>(response, 'Failed to upload sources');
 }
 
 export const useUploadSourcesMutation = () => {

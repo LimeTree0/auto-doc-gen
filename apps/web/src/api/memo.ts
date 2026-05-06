@@ -1,11 +1,13 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-export type MemoStatus = 'pending' | 'completed' | 'failed';
+export type MemoStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
 
 export type Memo = {
-    id: string;
-    title: string;
+    id: number;
     status: MemoStatus;
+    sourceIds: number[];
+    prompt: string;
+    createdAt: string;
 }
 
 export type ApiResponse<T> = {
@@ -43,5 +45,44 @@ export const useMemosQuery = () => {
     return useQuery({
         queryKey: memoKeys.all,
         queryFn: getMemos,
+        refetchInterval: (query) => {
+            const memos = query.state.data;
+            if (!memos) return false;
+            const hasInFlight = memos.some((m) => m.status === 'PENDING' || m.status === 'IN_PROGRESS');
+            return hasInFlight ? 2000 : false;
+        },
+    });
+}
+
+export type CreateMemoParams = {
+    sourceIds: number[];
+    template: File;
+    prompt: string;
+}
+
+export const createMemo = async ({ sourceIds, template, prompt }: CreateMemoParams): Promise<Memo> => {
+    const formData = new FormData();
+    for (const id of sourceIds) {
+        formData.append('sourceIds', String(id));
+    }
+    formData.append('template', template);
+    formData.append('prompt', prompt);
+
+    const response = await fetch(MEMOS_URL, {
+        method: 'POST',
+        body: formData,
+    });
+
+    return unwrap<Memo>(response, 'Failed to create memo');
+}
+
+export const useCreateMemoMutation = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: createMemo,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: memoKeys.all });
+        },
     });
 }
