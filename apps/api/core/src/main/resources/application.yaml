@@ -38,6 +38,7 @@ gemini:
 documents:
   api:
     base-url: ${DOCUMENTS_API_BASE_URL:http://localhost:8081}
+    mock: ${DOCUMENTS_API_MOCK:true} # Enable mock mode for testing value: true/false
 
 ---
 spring:

@@ -2,6 +2,7 @@ package com.limecoding.core.memo.infrastructure;
 
 import com.limecoding.core.memo.application.DocumentApiClient;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -15,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 
 @Slf4j
 @Component
+@ConditionalOnProperty(prefix = "documents.api", name = "mock", havingValue = "false", matchIfMissing = true)
 public class RestClientDocumentApiClient implements DocumentApiClient {
 
     private static final MediaType DOCX_MEDIA_TYPE =
