@@ -8,7 +8,10 @@ import com.limecoding.core.source.domain.Source;
 import com.limecoding.core.source.infrastructure.SourceJpaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.charset.StandardCharsets;
@@ -26,6 +29,7 @@ public class SourceService {
     private final SourceJpaRepository sourceJpaRepository;
     private final SourceEmbeddingQueue embeddingQueue;
     private final SourceContentLoader sourceContentLoader;
+    private final VectorStore vectorStore;
     private final MemoService memoService;
     private final TopicExtractor topicExtractor;
 
@@ -70,6 +74,45 @@ public class SourceService {
 
     public LoadedSource loadSource(Long sourceId) {
         return sourceContentLoader.load(sourceId);
+    }
+
+    @Transactional
+    public void deleteSource(Long sourceId) {
+        if (sourceId == null) {
+            throw new IllegalArgumentException("sourceId 가 비어 있습니다");
+        }
+        Source source = sourceJpaRepository.findById(sourceId)
+                .orElseThrow(() -> new IllegalArgumentException("Source not found: " + sourceId));
+
+        deleteEmbeddings(sourceId);
+        deleteUploadFile(source.getStoredName());
+        sourceJpaRepository.delete(source);
+        log.info("Source:{} 삭제 완료 (file={}, originalName={})",
+                sourceId, source.getStoredName(), source.getOriginalName());
+    }
+
+    private void deleteEmbeddings(Long sourceId) {
+        try {
+            FilterExpressionBuilder builder = new FilterExpressionBuilder();
+            vectorStore.delete(builder.eq(SourceIngestionService.META_SOURCE_ID, sourceId).build());
+            log.info("[Source:{}] vectorStore 항목 삭제", sourceId);
+        } catch (Exception e) {
+            log.warn("[Source:{}] vectorStore 항목 삭제 실패 (계속 진행)", sourceId, e);
+        }
+    }
+
+    private void deleteUploadFile(String storedName) {
+        if (storedName == null || storedName.isBlank()) {
+            return;
+        }
+        try {
+            boolean removed = Files.deleteIfExists(Paths.get("uploads").resolve(storedName));
+            if (removed) {
+                log.info("업로드 파일 삭제: {}", storedName);
+            }
+        } catch (Exception e) {
+            log.warn("업로드 파일 삭제 실패 (계속 진행): {}", storedName, e);
+        }
     }
 
     private String saveFile(MultipartFile source) {

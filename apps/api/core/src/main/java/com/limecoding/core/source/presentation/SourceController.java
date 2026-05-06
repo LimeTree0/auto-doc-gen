@@ -42,4 +42,10 @@ public class SourceController {
 
         return ApiResponse.success(AddSourceResponse.of(1));
     }
+
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> deleteSource(@PathVariable Long id) {
+        sourceService.deleteSource(id);
+        return ApiResponse.success(null);
+    }
 }
