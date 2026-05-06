@@ -843,6 +843,41 @@ function MemoList({ onSelectMemo }: { onSelectMemo: (id: number) => void }) {
     )
 }
 
+function MemoHtmlFrame({ html }: { html: string }) {
+    const ref = useRef<HTMLIFrameElement>(null);
+    const [height, setHeight] = useState<number>(0);
+
+    // srcdoc + sandbox=allow-same-origin: 부모/자식 CSS가 서로에게 영향을 주지 않으면서
+    // 같은 출처로 유지해 contentDocument를 읽어 자동 높이 조절이 가능. allow-scripts는
+    // 지정하지 않아 외부 HTML 내 스크립트는 실행되지 않음.
+    const handleLoad = () => {
+        const frame = ref.current;
+        if (!frame) return;
+        try {
+            const doc = frame.contentDocument;
+            const next = Math.max(
+                doc?.body?.scrollHeight ?? 0,
+                doc?.documentElement?.scrollHeight ?? 0,
+            );
+            if (next > 0) setHeight(next);
+        } catch {
+            // 접근 불가 시 무시 — 기본 높이 유지
+        }
+    };
+
+    return (
+        <iframe
+            ref={ref}
+            title="메모 본문"
+            srcDoc={html}
+            sandbox="allow-same-origin"
+            onLoad={handleLoad}
+            className="block w-full border-0 bg-white"
+            style={{ height }}
+        />
+    );
+}
+
 function MemoDetailView({ memoId, onBack }: { memoId: number; onBack: () => void }) {
     const { data: memos } = useMemosQuery();
     const memo = memos?.find((m) => m.id === memoId);
@@ -850,7 +885,7 @@ function MemoDetailView({ memoId, onBack }: { memoId: number; onBack: () => void
     const { data: html, isLoading, error } = useMemoHtmlQuery(memoId);
 
     return (
-        <div className="flex h-full flex-col">
+        <div className="flex h-full min-w-0 flex-col">
             <div className="flex items-center gap-2 border-b border-[#37383B] px-4 py-3">
                 <button
                     type="button"
@@ -862,16 +897,10 @@ function MemoDetailView({ memoId, onBack }: { memoId: number; onBack: () => void
                 </button>
                 <span className="flex-1 truncate text-sm font-medium text-white">{title}</span>
             </div>
-            <div className="flex-1 overflow-y-auto p-4">
-                {isLoading && <span className="px-1 text-xs text-white/50">불러오는 중…</span>}
-                {error && <span className="px-1 text-xs text-rose-400">{error.message}</span>}
-                {html && (
-                    // 신뢰 경계: 현재 HTML은 MSW mock에서만 생성되며, 실제 BE 연동 시 sanitization 필요.
-                    <div
-                        className="text-sm text-white/90 leading-relaxed [&_h1]:text-lg [&_h1]:font-bold [&_h1]:my-3 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:my-3 [&_p]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_li]:my-1"
-                        dangerouslySetInnerHTML={{ __html: html }}
-                    />
-                )}
+            <div className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
+                {isLoading && <span className="block px-4 py-3 text-xs text-white/50">불러오는 중…</span>}
+                {error && <span className="block px-4 py-3 text-xs text-rose-400">{error.message}</span>}
+                {html && <MemoHtmlFrame html={html} />}
             </div>
         </div>
     )

@@ -18,12 +18,14 @@ function ResizableLayout({ left, center, right, className }: ResizableLayoutProp
     const containerRef = useRef<HTMLDivElement>(null);
     const [leftWidth, setLeftWidth] = useState<number>(DEFAULT_LEFT);
     const [rightWidth, setRightWidth] = useState<number>(DEFAULT_RIGHT);
+    const [isResizing, setIsResizing] = useState<boolean>(false);
 
     const startResize = (side: 'left' | 'right') => (event: React.MouseEvent<HTMLDivElement>) => {
         event.preventDefault();
         const startX = event.clientX;
         const startLeft = leftWidth;
         const startRight = rightWidth;
+        setIsResizing(true);
 
         const handleMove = (ev: MouseEvent) => {
             const containerWidth = containerRef.current?.clientWidth ?? 0;
@@ -46,6 +48,7 @@ function ResizableLayout({ left, center, right, className }: ResizableLayoutProp
             window.removeEventListener('mouseup', handleUp);
             document.body.style.cursor = '';
             document.body.style.userSelect = '';
+            setIsResizing(false);
         };
 
         window.addEventListener('mousemove', handleMove);
@@ -67,6 +70,8 @@ function ResizableLayout({ left, center, right, className }: ResizableLayoutProp
             <div style={{ width: rightWidth }} className="shrink-0">
                 {right}
             </div>
+            {/* iframe 등 별도 browsing context가 mousemove를 가로채는 것을 막기 위한 드래그용 오버레이 */}
+            {isResizing && <div className="fixed inset-0 z-[9999] cursor-col-resize" />}
         </div>
     )
 }
