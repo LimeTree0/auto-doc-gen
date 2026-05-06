@@ -114,3 +114,19 @@ export const usePendingMemoConversionIds = (): number[] => {
     });
     return variables.filter((id): id is number => typeof id === 'number');
 }
+
+export const deleteSource = async (id: number): Promise<void> => {
+    const response = await fetch(`${SOURCES_URL}/${id}`, { method: 'DELETE' });
+    await unwrap<unknown>(response, 'Failed to delete source');
+}
+
+export const useDeleteSourceMutation = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: deleteSource,
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: sourceKeys.all });
+        },
+    });
+}

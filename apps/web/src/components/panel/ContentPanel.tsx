@@ -15,6 +15,7 @@ import {
 import {
   inferSourceType,
   useAddSourceFromMemoMutation,
+  useDeleteSourceMutation,
   usePendingMemoConversionIds,
   useSourcesQuery,
   type SourceType,
@@ -67,6 +68,7 @@ import {
   Square,
   StickyNote,
   Table,
+  Trash2,
   Video,
   Wand2,
   X,
@@ -269,18 +271,51 @@ function SourceListItem({
   file: SourceFile;
   onToggle: () => void;
 }) {
+  const { mutate: deleteSource } = useDeleteSourceMutation();
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onToggle();
+    }
+  };
+
+  const handleDelete = () => {
+    deleteSource(file.id);
+  };
+
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onToggle}
-      className="flex w-full items-center gap-2 rounded-md px-2 py-2 hover:bg-white/5"
+      onKeyDown={handleKeyDown}
+      className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 hover:bg-white/5"
     >
       <FileTypeIcon type={file.type} />
       <span className="flex-1 truncate text-left text-sm text-white">
         {file.name}
       </span>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            onClick={(e) => e.stopPropagation()}
+            aria-label="소스 메뉴 열기"
+            className="flex size-6 shrink-0 items-center justify-center rounded-md text-white/60 hover:bg-white/10 hover:text-white"
+          >
+            <MoreVertical className="size-4" strokeWidth={2} />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+          <DropdownMenuItem onSelect={handleDelete}>
+            <Trash2 className="size-4 text-rose-400" strokeWidth={2} />
+            <span>삭제</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
       <SourceCheckbox checked={file.checked} />
-    </button>
+    </div>
   );
 }
 
