@@ -35,6 +35,16 @@ public class SourceService {
         return all;
     }
 
+    public byte[] readSourceContent(Long sourceId) {
+        Source source = sourceJpaRepository.findById(sourceId)
+                .orElseThrow(() -> new IllegalArgumentException("Source not found: " + sourceId));
+        try {
+            return Files.readAllBytes(Paths.get("uploads").resolve(source.getStoredName()));
+        } catch (Exception e) {
+            throw new RuntimeException("소스 파일 읽기 실패: " + sourceId, e);
+        }
+    }
+
     private String saveFile(MultipartFile source) {
         try {
             Path uploadDirectory = Paths.get("uploads");
