@@ -1,4 +1,11 @@
 import {
+  chatKeys,
+  streamMessage,
+  useCreateConversationMutation,
+  useMessagesQuery,
+  type Message as ChatMessage,
+} from "@/api/chat";
+import {
   downloadMemoDocx,
   useCreateMemoMutation,
   useMemoHtmlQuery,
@@ -10,6 +17,7 @@ import {
   useSourcesQuery,
   type SourceType,
 } from "@/api/source";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -54,6 +62,7 @@ import {
   RefreshCw,
   Search,
   Sparkles,
+  Square,
   StickyNote,
   Table,
   Video,
@@ -63,12 +72,15 @@ import {
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
   type ComponentProps,
+  type FormEvent,
   type ReactNode,
 } from "react";
+import { Streamdown } from "streamdown";
 import FileUpload from "./FileUpload";
 import Panel from "./Panel";
 
@@ -376,83 +388,94 @@ function LeftPanel({}: LeftPanelProps) {
   );
 }
 
-function BotMessage() {
+function BotMessage({ content }: { content: string }) {
   return (
     <div className="flex gap-3">
       <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/20">
         <Sparkles className="size-4 text-emerald-400" strokeWidth={2} />
       </div>
-      <div className="flex flex-1 flex-col gap-3 text-sm leading-relaxed text-white/90">
-        <p>
-          외부 의견(Sounding) 신청 후 구조화하여 정리한 슬라이드와 함께 LLM의
-          응답을 다음과 같이 정리했습니다.
-        </p>
-        <h3 className="text-base font-bold text-white">
-          Slide 5. UI/UX 개선 및 향후 로드맵
-        </h3>
-        <ul className="flex list-disc flex-col gap-2 pl-5">
-          <li>
-            <span className="font-semibold text-white">모바일 최적화</span>:
-            다양한 화면 크기에 대응하여 사용성 개선
-          </li>
-          <li>
-            <span className="font-semibold text-white">
-              음성 인식 정확도 개선
-            </span>
-            : 다국어 환경에서의 정확도 향상을 위한 모델(Llama, Gemma 등) 평가
-          </li>
-          <li>
-            <span className="font-semibold text-white">음성 기반 LLM 응답</span>
-            : 음성을 자연스럽게 처리하는 LLM 응답 시스템 도입
-          </li>
-          <li>
-            <span className="font-semibold text-white">사용자 피드백 반영</span>
-            : 베타 사용자의 의견을 빠르게 수집·반영하는 사이클 구축
-          </li>
-        </ul>
+      <div className="streamdown-message flex min-w-0 flex-1 flex-col gap-3 text-sm leading-relaxed text-white/90">
+        {content.length > 0 ? (
+          <Streamdown>{content}</Streamdown>
+        ) : (
+          <span className="inline-flex h-4 items-center gap-1 text-white/40">
+            <span className="size-1.5 animate-pulse rounded-full bg-white/40" />
+            <span className="size-1.5 animate-pulse rounded-full bg-white/40 [animation-delay:120ms]" />
+            <span className="size-1.5 animate-pulse rounded-full bg-white/40 [animation-delay:240ms]" />
+          </span>
+        )}
       </div>
     </div>
   );
 }
 
-function UserMessage() {
+function UserMessage({ content }: { content: string }) {
   return (
     <div className="flex justify-end">
       <div className="max-w-[80%] rounded-2xl bg-[#2d3137] px-4 py-2.5">
-        <p className="text-sm text-white">
-          이해를 돕기 위해 이번 슬라이드 내용을 좀 더 풀어서 다시 설명해주세요.
-        </p>
+        <p className="whitespace-pre-wrap text-sm text-white">{content}</p>
       </div>
     </div>
   );
 }
 
-function ChatInput() {
-  const { selectedCount } = useSources();
+type ChatInputProps = {
+  isStreaming: boolean;
+  disabled: boolean;
+  onSend: (content: string) => void;
+  onStop: () => void;
+};
+
+function ChatInput({ isStreaming, disabled, onSend, onStop }: ChatInputProps) {
+  const [value, setValue] = useState("");
+
+  const trimmed = value.trim();
+  const canSend = !disabled && !isStreaming && trimmed.length > 0;
+
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!canSend) return;
+    onSend(trimmed);
+    setValue("");
+  };
+
   return (
-    <div className="flex flex-col rounded-xl border border-[#37383B] bg-bg">
+    <form
+      onSubmit={handleSubmit}
+      className="flex flex-col rounded-xl border border-[#37383B] bg-bg"
+    >
       <input
-        className="border-none bg-transparent px-4 pt-3 pb-2 text-sm text-white outline-none placeholder:text-white/40"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        disabled={disabled}
+        className="border-none bg-transparent px-4 pt-3 pb-2 text-sm text-white outline-none placeholder:text-white/40 disabled:cursor-not-allowed disabled:opacity-60"
         placeholder="무엇이든 물어보세요"
       />
-      <div className="flex items-center justify-between px-3 pb-2">
-        <button
-          type="button"
-          onClick={() => {}}
-          className="flex items-center gap-1.5 rounded-full px-2 py-1 text-xs text-white/60 hover:bg-white/5"
-        >
-          <Paperclip className="size-3.5" strokeWidth={2} />
-          <span>출처 {selectedCount}개</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => {}}
-          className="flex size-7 items-center justify-center rounded-full bg-emerald-500 hover:bg-emerald-600"
-        >
-          <ArrowUp className="size-4 text-black" strokeWidth={2.5} />
-        </button>
+      <div className="flex items-center justify-end px-3 pb-2">
+        {isStreaming ? (
+          <button
+            type="button"
+            onClick={onStop}
+            aria-label="생성 중지"
+            className="flex size-7 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"
+          >
+            <Square
+              className="size-3.5 fill-white text-white"
+              strokeWidth={2}
+            />
+          </button>
+        ) : (
+          <button
+            type="submit"
+            disabled={!canSend}
+            aria-label="전송"
+            className="flex size-7 items-center justify-center rounded-full bg-emerald-500 hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-white/10"
+          >
+            <ArrowUp className="size-4 text-black" strokeWidth={2.5} />
+          </button>
+        )}
       </div>
-    </div>
+    </form>
   );
 }
 
@@ -461,6 +484,119 @@ type CenterPanelProps = {
 };
 
 function CenterPanel({}: CenterPanelProps) {
+  const queryClient = useQueryClient();
+  const { mutate: createConversation, isPending: isCreating } =
+    useCreateConversationMutation();
+  const [conversationId, setConversationId] = useState<number | null>(null);
+  const [streamingContent, setStreamingContent] = useState<string | null>(null);
+  const [streamError, setStreamError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const { data: messages } = useMessagesQuery(conversationId);
+  const messageListRef = useRef<HTMLDivElement>(null);
+
+  const ensureConversation = (after?: (id: number) => void) => {
+    createConversation(undefined, {
+      onSuccess: (created) => {
+        setConversationId(created.id);
+        setStreamingContent(null);
+        setStreamError(null);
+        after?.(created.id);
+      },
+    });
+  };
+
+  // 첫 진입 시 자동으로 새 대화를 만든다.
+  useEffect(() => {
+    if (conversationId == null && !isCreating) {
+      ensureConversation();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 메시지/스트림 변할 때 스크롤 하단 고정
+  useEffect(() => {
+    const el = messageListRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [messages, streamingContent]);
+
+  const handleSend = async (content: string) => {
+    if (conversationId == null) return;
+    const id = conversationId;
+
+    // 유저 메시지를 캐시에 낙관적으로 추가 (백엔드도 시작 시점에 저장하므로 invalidate로 정합화됨)
+    const optimisticUser: ChatMessage = {
+      id: -Date.now(),
+      conversationId: id,
+      role: "USER",
+      content,
+      createdAt: new Date().toISOString(),
+    };
+    queryClient.setQueryData<ChatMessage[]>(
+      chatKeys.messages(id),
+      (prev) => [...(prev ?? []), optimisticUser],
+    );
+
+    setStreamingContent("");
+    setStreamError(null);
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    try {
+      await streamMessage(
+        id,
+        content,
+        {
+          onDelta: (chunk) =>
+            setStreamingContent((prev) => (prev ?? "") + chunk),
+          onDone: () => {
+            setStreamingContent(null);
+            queryClient.invalidateQueries({
+              queryKey: chatKeys.messages(id),
+            });
+          },
+          onError: (message) => {
+            setStreamError(message);
+            setStreamingContent(null);
+            queryClient.invalidateQueries({
+              queryKey: chatKeys.messages(id),
+            });
+          },
+        },
+        controller.signal,
+      );
+    } catch (err) {
+      if ((err as Error).name === "AbortError") {
+        // 사용자가 중지 — 부분 응답은 버리고 서버 상태로 동기화
+        setStreamingContent(null);
+        queryClient.invalidateQueries({
+          queryKey: chatKeys.messages(id),
+        });
+      } else {
+        setStreamError((err as Error).message);
+        setStreamingContent(null);
+      }
+    } finally {
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+      }
+    }
+  };
+
+  const handleStop = () => {
+    abortRef.current?.abort();
+  };
+
+  const handleNewConversation = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    ensureConversation();
+  };
+
+  const isStreaming = streamingContent != null;
+
   return (
     <Panel
       className="h-full w-full"
@@ -468,20 +604,39 @@ function CenterPanel({}: CenterPanelProps) {
       buttonArea={
         <button
           type="button"
-          onClick={() => {}}
-          className="text-white/70 hover:text-white"
+          onClick={handleNewConversation}
+          disabled={isCreating}
+          aria-label="새 대화"
+          className="text-white/70 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
           <RefreshCw className="size-4" strokeWidth={2} />
         </button>
       }
     >
       <div className="flex h-full flex-col">
-        <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-4">
-          <BotMessage />
-          <UserMessage />
+        <div
+          ref={messageListRef}
+          className="flex flex-1 flex-col gap-6 overflow-y-auto p-4"
+        >
+          {messages?.map((message) =>
+            message.role === "USER" ? (
+              <UserMessage key={message.id} content={message.content} />
+            ) : (
+              <BotMessage key={message.id} content={message.content} />
+            ),
+          )}
+          {isStreaming && <BotMessage content={streamingContent ?? ""} />}
+          {streamError && (
+            <span className="text-xs text-rose-400">{streamError}</span>
+          )}
         </div>
         <div className="flex flex-col gap-2 p-4">
-          <ChatInput />
+          <ChatInput
+            isStreaming={isStreaming}
+            disabled={conversationId == null}
+            onSend={handleSend}
+            onStop={handleStop}
+          />
         </div>
       </div>
     </Panel>
