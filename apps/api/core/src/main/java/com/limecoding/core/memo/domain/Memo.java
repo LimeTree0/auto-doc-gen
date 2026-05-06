@@ -44,17 +44,13 @@ public class Memo {
     private String cachedDocxStoredName;
     private LocalDateTime createdAt;
 
-    public Memo(List<Long> sourceIds, String prompt) {
+    public Memo(List<Long> sourceIds, String prompt, String templateStoredName, String templateOriginalName) {
         this.sourceIds = new ArrayList<>(sourceIds);
         this.prompt = prompt;
-        this.status = MemoStatus.PENDING;
-        this.createdAt = LocalDateTime.now();
-    }
-
-    public Memo(List<Long> sourceIds, String prompt, String templateStoredName, String templateOriginalName) {
-        this(sourceIds, prompt);
         this.templateStoredName = templateStoredName;
         this.templateOriginalName = templateOriginalName;
+        this.status = MemoStatus.PENDING;
+        this.createdAt = LocalDateTime.now();
     }
 
     public void markInProgress() {
