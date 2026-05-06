@@ -9,10 +9,14 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +26,8 @@ public class MemoService {
 
     private final MemoJpaRepository memoRepository;
     private final MemoGenerationQueue queue;
+    private final MemoGenerationProcessor processor;
+    private final DocumentApiClient documentApiClient;
 
     public Memo requestGeneration(List<Long> sourceIds, MultipartFile template, String prompt) {
         if (sourceIds == null || sourceIds.isEmpty()) {
@@ -31,15 +37,13 @@ public class MemoService {
             throw new IllegalArgumentException("소스 ID는 최대 " + MAX_SOURCE_IDS + "개까지 허용됩니다");
         }
 
-        byte[] templateBytes;
-        try {
-            templateBytes = template.getBytes();
-        } catch (IOException e) {
-            throw new RuntimeException("템플릿 읽기 실패", e);
-        }
+        String templateOriginalName = Optional.ofNullable(template.getOriginalFilename())
+                .filter(name -> !name.isBlank())
+                .orElse("template.docx");
+        String templateStoredName = saveTemplate(template, templateOriginalName);
 
-        Memo memo = memoRepository.save(new Memo(sourceIds, prompt));
-        queue.enqueue(memo.getId(), templateBytes);
+        Memo memo = memoRepository.save(new Memo(sourceIds, prompt, templateStoredName, templateOriginalName));
+        queue.enqueue(memo.getId());
         return memo;
     }
 
@@ -54,16 +58,48 @@ public class MemoService {
                 .orElseThrow(() -> new IllegalArgumentException("Memo not found: " + id));
     }
 
-    @Transactional(readOnly = true)
-    public byte[] readResult(Long id) {
+    public byte[] downloadDocx(Long id) {
         Memo memo = getMemo(id);
         if (memo.getStatus() != MemoStatus.COMPLETED) {
             throw new IllegalStateException("Memo가 아직 완료되지 않았습니다: " + memo.getStatus());
         }
+
+        if (memo.getCachedDocxStoredName() != null) {
+            return readUpload(memo.getCachedDocxStoredName());
+        }
+
+        byte[] templateBytes = readUpload(memo.getTemplateStoredName());
+        String filledHtml = new String(readUpload(memo.getResultStoredName()), StandardCharsets.UTF_8);
+        byte[] docxBytes = documentApiClient.fillDocxHtml(templateBytes, filledHtml, memo.getPrompt());
+
+        String cachedName = UUID.randomUUID() + "_cached.docx";
         try {
-            return Files.readAllBytes(UPLOAD_DIRECTORY.resolve(memo.getResultStoredName()));
+            Files.createDirectories(UPLOAD_DIRECTORY);
+            Files.write(UPLOAD_DIRECTORY.resolve(cachedName), docxBytes);
         } catch (IOException e) {
-            throw new RuntimeException("결과 파일 읽기 실패", e);
+            throw new RuntimeException("DOCX 캐시 저장 실패", e);
+        }
+        processor.markDocxCached(id, cachedName);
+
+        return docxBytes;
+    }
+
+    private String saveTemplate(MultipartFile template, String originalName) {
+        try {
+            Files.createDirectories(UPLOAD_DIRECTORY);
+            String storedName = UUID.randomUUID() + "_" + originalName;
+            template.transferTo(UPLOAD_DIRECTORY.resolve(Objects.requireNonNull(storedName)));
+            return storedName;
+        } catch (IOException e) {
+            throw new RuntimeException("템플릿 저장 실패", e);
+        }
+    }
+
+    private byte[] readUpload(String storedName) {
+        try {
+            return Files.readAllBytes(UPLOAD_DIRECTORY.resolve(storedName));
+        } catch (IOException e) {
+            throw new RuntimeException("파일 읽기 실패: " + storedName, e);
         }
     }
 }

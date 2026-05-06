@@ -13,29 +13,41 @@ public class MemoGenerationProcessor {
 
     @Transactional
     public void markInProgress(Long memoId) {
-        Memo memo = memoRepository.findById(memoId)
-                .orElseThrow(() -> new IllegalStateException("Memo not found: " + memoId));
+        Memo memo = load(memoId);
         memo.markInProgress();
     }
 
     @Transactional(readOnly = true)
     public MemoSnapshot loadSnapshot(Long memoId) {
-        Memo memo = memoRepository.findById(memoId)
-                .orElseThrow(() -> new IllegalStateException("Memo not found: " + memoId));
-        return new MemoSnapshot(memo.getPrompt(), memo.getSourceIds());
+        Memo memo = load(memoId);
+        return new MemoSnapshot(
+                memo.getPrompt(),
+                memo.getSourceIds(),
+                memo.getTemplateStoredName(),
+                memo.getTemplateOriginalName()
+        );
     }
 
     @Transactional
     public void markCompleted(Long memoId, String resultStoredName) {
-        Memo memo = memoRepository.findById(memoId)
-                .orElseThrow(() -> new IllegalStateException("Memo not found: " + memoId));
+        Memo memo = load(memoId);
         memo.markCompleted(resultStoredName);
     }
 
     @Transactional
+    public void markDocxCached(Long memoId, String cachedDocxStoredName) {
+        Memo memo = load(memoId);
+        memo.markDocxCached(cachedDocxStoredName);
+    }
+
+    @Transactional
     public void markFailed(Long memoId) {
-        Memo memo = memoRepository.findById(memoId)
-                .orElseThrow(() -> new IllegalStateException("Memo not found: " + memoId));
+        Memo memo = load(memoId);
         memo.markFailed();
+    }
+
+    private Memo load(Long memoId) {
+        return memoRepository.findById(memoId)
+                .orElseThrow(() -> new IllegalStateException("Memo not found: " + memoId));
     }
 }

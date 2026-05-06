@@ -35,11 +35,12 @@ public class SourceService {
         return all;
     }
 
-    public byte[] readSourceContent(Long sourceId) {
+    public LoadedSource loadSource(Long sourceId) {
         Source source = sourceJpaRepository.findById(sourceId)
                 .orElseThrow(() -> new IllegalArgumentException("Source not found: " + sourceId));
         try {
-            return Files.readAllBytes(Paths.get("uploads").resolve(source.getStoredName()));
+            byte[] content = Files.readAllBytes(Paths.get("uploads").resolve(source.getStoredName()));
+            return new LoadedSource(source.getOriginalName(), content);
         } catch (Exception e) {
             throw new RuntimeException("소스 파일 읽기 실패: " + sourceId, e);
         }

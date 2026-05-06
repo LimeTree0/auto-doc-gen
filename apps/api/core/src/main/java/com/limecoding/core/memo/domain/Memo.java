@@ -38,12 +38,17 @@ public class Memo {
     @Column(name = "source_id")
     private List<Long> sourceIds = new ArrayList<>();
 
+    private String templateStoredName;
+    private String templateOriginalName;
     private String resultStoredName;
+    private String cachedDocxStoredName;
     private LocalDateTime createdAt;
 
-    public Memo(List<Long> sourceIds, String prompt) {
+    public Memo(List<Long> sourceIds, String prompt, String templateStoredName, String templateOriginalName) {
         this.sourceIds = new ArrayList<>(sourceIds);
         this.prompt = prompt;
+        this.templateStoredName = templateStoredName;
+        this.templateOriginalName = templateOriginalName;
         this.status = MemoStatus.PENDING;
         this.createdAt = LocalDateTime.now();
     }
@@ -55,6 +60,10 @@ public class Memo {
     public void markCompleted(String resultStoredName) {
         this.status = MemoStatus.COMPLETED;
         this.resultStoredName = resultStoredName;
+    }
+
+    public void markDocxCached(String cachedDocxStoredName) {
+        this.cachedDocxStoredName = cachedDocxStoredName;
     }
 
     public void markFailed() {

@@ -53,7 +53,7 @@ public class MemoController {
 
     @GetMapping("/{id}/docx")
     public ResponseEntity<byte[]> download(@PathVariable Long id) {
-        byte[] data = memoService.readResult(id);
+        byte[] data = memoService.downloadDocx(id);
         return ResponseEntity.ok()
                 .contentType(DOCX_MEDIA_TYPE)
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=memo-" + id + ".docx")
