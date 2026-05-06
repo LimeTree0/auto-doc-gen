@@ -45,6 +45,11 @@ public class MemoService {
     }
 
     @Transactional(readOnly = true)
+    public List<Memo> getMemos() {
+        return memoRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
     public Memo getMemo(Long id) {
         return memoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Memo not found: " + id));

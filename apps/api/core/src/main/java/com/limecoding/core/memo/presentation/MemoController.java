@@ -38,6 +38,14 @@ public class MemoController {
         return ApiResponse.success(GetMemoResponse.from(memo));
     }
 
+    @GetMapping
+    public ApiResponse<List<GetMemoResponse>> list() {
+        List<GetMemoResponse> memos = memoService.getMemos().stream()
+                .map(GetMemoResponse::from)
+                .toList();
+        return ApiResponse.success(memos);
+    }
+
     @GetMapping("/{id}")
     public ApiResponse<GetMemoResponse> get(@PathVariable Long id) {
         return ApiResponse.success(GetMemoResponse.from(memoService.getMemo(id)));
