@@ -1,6 +1,13 @@
 spring:
   application:
     name: core
+  ai:
+    google:
+      genai:
+        api-key: ${GEMINI_API_KEY:}
+        chat:
+          options:
+            model: ${GEMINI_CHAT_MODEL:gemini-2.5-flash}
 springdoc:
   api-docs:
     path: /api-docs

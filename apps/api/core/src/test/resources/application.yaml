@@ -1,0 +1,29 @@
+spring:
+  ai:
+    google:
+      genai:
+        api-key: test-dummy-key
+        chat:
+          options:
+            model: gemini-2.5-flash
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ''
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+    open-in-view: false
+
+gemini:
+  api-key: test-dummy-key
+  model: gemini-2.5-flash
+  base-url: http://localhost
+
+documents:
+  api:
+    base-url: http://localhost
