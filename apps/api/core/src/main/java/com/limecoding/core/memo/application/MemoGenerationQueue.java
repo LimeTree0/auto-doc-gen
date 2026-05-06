@@ -1,7 +1,7 @@
 package com.limecoding.core.memo.application;
 
 import com.limecoding.core.source.application.LoadedSource;
-import com.limecoding.core.source.application.SourceService;
+import com.limecoding.core.source.application.SourceContentLoader;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +31,7 @@ public class MemoGenerationQueue {
             """;
 
     private final MemoGenerationProcessor processor;
-    private final SourceService sourceService;
+    private final SourceContentLoader sourceContentLoader;
     private final GeminiClient geminiClient;
     private final DocumentApiClient documentApiClient;
     private final TopicExtractor topicExtractor;
@@ -98,7 +98,7 @@ public class MemoGenerationQueue {
     }
 
     private GeminiInput loadAsGeminiInput(Long sourceId) {
-        LoadedSource loaded = sourceService.loadSource(sourceId);
+        LoadedSource loaded = sourceContentLoader.load(sourceId);
         SourceFormat format = SourceFormat.fromFilename(loaded.originalName());
         log.info("소스 로드: id={}, name={}, format={}, bytes={}",
                 sourceId, loaded.originalName(), format, loaded.content().length);
@@ -106,6 +106,7 @@ public class MemoGenerationQueue {
             case PDF -> GeminiInput.inlineData("application/pdf", loaded.content());
             case DOCX -> GeminiInput.text(documentApiClient.docxToHtml(loaded.content(), loaded.originalName()));
             case HWPX -> GeminiInput.text(documentApiClient.hwpxToHtml(loaded.content(), loaded.originalName()));
+            case HTML -> null;
             case TEXT -> GeminiInput.text(new String(loaded.content(), StandardCharsets.UTF_8));
         };
     }

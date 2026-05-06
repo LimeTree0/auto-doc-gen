@@ -1,6 +1,7 @@
 package com.limecoding.core.source.application;
 
 import com.limecoding.core.memo.application.MemoService;
+import com.limecoding.core.memo.application.TopicExtractor;
 import com.limecoding.core.memo.domain.Memo;
 import com.limecoding.core.memo.domain.MemoStatus;
 import com.limecoding.core.source.domain.Source;
@@ -24,7 +25,9 @@ import java.util.UUID;
 public class SourceService {
     private final SourceJpaRepository sourceJpaRepository;
     private final SourceEmbeddingQueue embeddingQueue;
+    private final SourceContentLoader sourceContentLoader;
     private final MemoService memoService;
+    private final TopicExtractor topicExtractor;
 
     public void uploadSources(List<MultipartFile> sources) {
         for (MultipartFile source : sources) {
@@ -46,7 +49,8 @@ public class SourceService {
 
         String html = memoService.loadResultHtml(memoId);
         byte[] bytes = html.getBytes(StandardCharsets.UTF_8);
-        String originalName = "memo-" + memoId + ".html";
+        String topic = topicExtractor.fromTemplateFilename(memo.getTemplateOriginalName());
+        String originalName = topic + ".html";
         String storedName = saveBytes(bytes, originalName);
 
         Source saved = sourceJpaRepository.save(new Source(storedName, originalName));
@@ -65,14 +69,7 @@ public class SourceService {
     }
 
     public LoadedSource loadSource(Long sourceId) {
-        Source source = sourceJpaRepository.findById(sourceId)
-                .orElseThrow(() -> new IllegalArgumentException("Source not found: " + sourceId));
-        try {
-            byte[] content = Files.readAllBytes(Paths.get("uploads").resolve(source.getStoredName()));
-            return new LoadedSource(source.getOriginalName(), content);
-        } catch (Exception e) {
-            throw new RuntimeException("소스 파일 읽기 실패: " + sourceId, e);
-        }
+        return sourceContentLoader.load(sourceId);
     }
 
     private String saveFile(MultipartFile source) {

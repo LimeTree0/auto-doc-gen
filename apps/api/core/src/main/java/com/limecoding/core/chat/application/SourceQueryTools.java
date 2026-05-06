@@ -1,7 +1,7 @@
 package com.limecoding.core.chat.application;
 
 import com.limecoding.core.source.application.LoadedSource;
-import com.limecoding.core.source.application.SourceService;
+import com.limecoding.core.source.application.SourceContentLoader;
 import com.limecoding.core.source.application.SourceTextExtractor;
 import com.limecoding.core.source.domain.Source;
 import com.limecoding.core.source.infrastructure.SourceJpaRepository;
@@ -21,7 +21,7 @@ public class SourceQueryTools {
     private static final int MAX_CONTENT_LENGTH = 20_000;
 
     private final SourceJpaRepository sourceRepository;
-    private final SourceService sourceService;
+    private final SourceContentLoader sourceContentLoader;
     private final SourceTextExtractor textExtractor;
 
     public record SourceSummary(Long id, String originalName, String embeddingStatus, Integer chunkCount) {}
@@ -57,7 +57,7 @@ public class SourceQueryTools {
     public SourceContent getSourceContent(
             @ToolParam(description = "listSources 결과의 id 값") Long sourceId) {
         log.info("[ToolCall] getSourceContent(sourceId={})", sourceId);
-        LoadedSource loaded = sourceService.loadSource(sourceId);
+        LoadedSource loaded = sourceContentLoader.load(sourceId);
         String text = textExtractor.extract(loaded.content(), loaded.originalName());
         boolean truncated = text.length() > MAX_CONTENT_LENGTH;
         if (truncated) {
