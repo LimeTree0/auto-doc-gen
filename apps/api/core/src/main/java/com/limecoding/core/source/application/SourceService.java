@@ -2,6 +2,7 @@ package com.limecoding.core.source.application;
 
 import com.limecoding.core.memo.application.MemoService;
 import com.limecoding.core.memo.application.TopicExtractor;
+import com.limecoding.core.memo.application.UploadedFile;
 import com.limecoding.core.memo.domain.Memo;
 import com.limecoding.core.memo.domain.MemoStatus;
 import com.limecoding.core.source.domain.Source;
@@ -18,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -33,12 +35,26 @@ public class SourceService {
     private final MemoService memoService;
     private final TopicExtractor topicExtractor;
 
-    public void uploadSources(List<MultipartFile> sources) {
+    public List<Source> uploadSources(List<MultipartFile> sources) {
+        List<Source> savedSources = new ArrayList<>(sources.size());
         for (MultipartFile source : sources) {
             String storedName = saveFile(source);
             Source saved = sourceJpaRepository.save(new Source(storedName, source.getOriginalFilename()));
             embeddingQueue.enqueue(saved.getId());
+            savedSources.add(saved);
         }
+        return savedSources;
+    }
+
+    public List<Source> uploadFromBytes(List<UploadedFile> sources) {
+        List<Source> savedSources = new ArrayList<>(sources.size());
+        for (UploadedFile source : sources) {
+            String storedName = saveBytes(source.content(), source.filename());
+            Source saved = sourceJpaRepository.save(new Source(storedName, source.filename()));
+            embeddingQueue.enqueue(saved.getId());
+            savedSources.add(saved);
+        }
+        return savedSources;
     }
 
     public Source uploadFromMemo(Long memoId) {

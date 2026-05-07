@@ -94,6 +94,10 @@ public class MemoGenerationQueue {
     }
 
     private String summarizeSources(List<Long> sourceIds, String htmlTemplate) {
+        if (sourceIds == null || sourceIds.isEmpty()) {
+            log.info("자료 없음, 요약 생략");
+            return "";
+        }
         List<GeminiInput> inputs = new ArrayList<>();
         inputs.add(GeminiInput.text(htmlTemplate));
         sourceIds.stream()

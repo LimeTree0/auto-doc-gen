@@ -1,6 +1,7 @@
 package com.limecoding.core.memo.presentation;
 
 import com.limecoding.core.common.ApiResponse;
+import com.limecoding.core.memo.application.MemoAutoCreationService;
 import com.limecoding.core.memo.application.MemoService;
 import com.limecoding.core.memo.domain.Memo;
 import com.limecoding.core.memo.presentation.dto.GetMemoResponse;
@@ -27,6 +28,7 @@ public class MemoController {
             MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
 
     private final MemoService memoService;
+    private final MemoAutoCreationService memoAutoCreationService;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<GetMemoResponse> create(
@@ -35,6 +37,15 @@ public class MemoController {
             @RequestParam("prompt") String prompt
     ) {
         Memo memo = memoService.requestGeneration(sourceIds, template, prompt);
+        return ApiResponse.success(GetMemoResponse.from(memo));
+    }
+
+    @PostMapping(value = "/auto", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<GetMemoResponse> createAuto(
+            @RequestPart("files") List<MultipartFile> files,
+            @RequestParam("prompt") String prompt
+    ) {
+        Memo memo = memoAutoCreationService.create(files, prompt);
         return ApiResponse.success(GetMemoResponse.from(memo));
     }
 

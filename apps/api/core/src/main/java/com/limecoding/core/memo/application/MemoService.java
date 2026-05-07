@@ -44,6 +44,24 @@ public class MemoService {
                 .orElse("template.docx");
         String templateStoredName = saveTemplate(template, templateOriginalName);
 
+        return enqueue(sourceIds, prompt, templateStoredName, templateOriginalName);
+    }
+
+    public Memo requestGenerationFromBytes(UploadedFile template, List<Long> sourceIds, String prompt) {
+        List<Long> ids = sourceIds == null ? List.of() : sourceIds;
+        if (ids.size() > MAX_SOURCE_IDS) {
+            throw new IllegalArgumentException("소스 ID는 최대 " + MAX_SOURCE_IDS + "개까지 허용됩니다");
+        }
+
+        String templateOriginalName = Optional.ofNullable(template.filename())
+                .filter(name -> !name.isBlank())
+                .orElse("template.docx");
+        String templateStoredName = saveTemplateBytes(template.content(), templateOriginalName);
+
+        return enqueue(ids, prompt, templateStoredName, templateOriginalName);
+    }
+
+    private Memo enqueue(List<Long> sourceIds, String prompt, String templateStoredName, String templateOriginalName) {
         Memo memo = memoRepository.save(new Memo(sourceIds, prompt, templateStoredName, templateOriginalName));
         log.info("Memo 생성 요청 수신: id={}, sourceIds={}, template={}, promptLen={}",
                 memo.getId(), sourceIds, templateOriginalName, prompt == null ? 0 : prompt.length());
@@ -104,6 +122,17 @@ public class MemoService {
             Files.createDirectories(UPLOAD_DIRECTORY);
             String storedName = UUID.randomUUID() + "_" + originalName;
             template.transferTo(UPLOAD_DIRECTORY.resolve(Objects.requireNonNull(storedName)));
+            return storedName;
+        } catch (IOException e) {
+            throw new RuntimeException("템플릿 저장 실패", e);
+        }
+    }
+
+    private String saveTemplateBytes(byte[] content, String originalName) {
+        try {
+            Files.createDirectories(UPLOAD_DIRECTORY);
+            String storedName = UUID.randomUUID() + "_" + originalName;
+            Files.write(UPLOAD_DIRECTORY.resolve(storedName), content);
             return storedName;
         } catch (IOException e) {
             throw new RuntimeException("템플릿 저장 실패", e);
