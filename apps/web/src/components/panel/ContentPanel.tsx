@@ -1294,9 +1294,16 @@ function MemoList({ onSelectMemo }: { onSelectMemo: (id: number) => void }) {
     );
   }
 
+  const sortedMemos = [...memos].sort((a, b) => {
+    const aPending = a.status === "PENDING" || a.status === "IN_PROGRESS";
+    const bPending = b.status === "PENDING" || b.status === "IN_PROGRESS";
+    if (aPending !== bPending) return aPending ? -1 : 1;
+    return b.createdAt.localeCompare(a.createdAt);
+  });
+
   return (
     <div className="flex flex-col gap-2">
-      {memos.map((memo) => (
+      {sortedMemos.map((memo) => (
         <MemoItem
           key={memo.id}
           memo={memo}
