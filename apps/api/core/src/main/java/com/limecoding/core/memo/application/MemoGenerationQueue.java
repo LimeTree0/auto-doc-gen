@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -24,10 +25,13 @@ public class MemoGenerationQueue {
     private static final Path UPLOAD_DIRECTORY = Paths.get("uploads");
 
     private static final String SUMMARY_PROMPT = """
-            아래 자료들을 한국어 마크다운으로 종합 요약해 주세요.
-            - 핵심 사실, 결정 사항, 액션 아이템을 절을 나누어 정리하세요.
+            첫 번째 입력은 결과물이 채워질 HTML 템플릿이고, 이후 입력들은 요약 대상 자료입니다.
+            - 템플릿은 섹션·필드 구조를 파악하기 위한 참고용이며, 출력 형식이 아닙니다.
+            - 템플릿의 섹션 제목과 빈칸 구조를 파악해 그에 맞춰 자료 내용을 배치하세요.
+            - 템플릿에 없는 섹션은 만들지 말고, 템플릿이 요구하지만 자료에 근거가 없는 항목은 비워두세요.
             - 자료에 명시된 내용만 사용하고 추측은 하지 마세요.
-            - 결과는 마크다운 형식으로만 반환하세요.
+            - 출력은 반드시 한국어 **마크다운**으로만 작성하세요. HTML 태그(`<h1>`, `<p>`, `<table>`, `<div>` 등), 코드 펜스(```), 그 외 마크업은 사용하지 마세요.
+            - 섹션 제목은 `#`/`##`, 목록은 `-`, 라벨-값은 `**라벨**: 값` 형식을 사용하세요.
             """;
 
     private final MemoGenerationProcessor processor;
@@ -53,16 +57,16 @@ public class MemoGenerationQueue {
                     memoId, snapshot.sourceIds(), snapshot.templateOriginalName());
 
             long stepAt = System.currentTimeMillis();
-            String summary = summarizeSources(snapshot.sourceIds());
-            log.info("[Memo:{}] (1/4) 소스 요약 완료, 길이={}자, {}ms",
-                    memoId, summary.length(), System.currentTimeMillis() - stepAt);
-
-            stepAt = System.currentTimeMillis();
-            log.info("[Memo:{}] (2/4) 템플릿 HTML 변환 시작: storedName={}, originalName={}",
+            log.info("[Memo:{}] (1/4) 템플릿 HTML 변환 시작: storedName={}, originalName={}",
                     memoId, snapshot.templateStoredName(), snapshot.templateOriginalName());
             String htmlTemplate = convertTemplateToHtml(snapshot);
-            log.info("[Memo:{}] (2/4) 템플릿 HTML 변환 완료, 길이={}자, {}ms",
+            log.info("[Memo:{}] (1/4) 템플릿 HTML 변환 완료, 길이={}자, {}ms",
                     memoId, htmlTemplate.length(), System.currentTimeMillis() - stepAt);
+
+            stepAt = System.currentTimeMillis();
+            String summary = summarizeSources(snapshot.sourceIds(), htmlTemplate);
+            log.info("[Memo:{}] (2/4) 소스 요약 완료, 길이={}자, {}ms",
+                    memoId, summary.length(), System.currentTimeMillis() - stepAt);
 
             stepAt = System.currentTimeMillis();
             String filledHtml = fillTemplate(htmlTemplate, summary, snapshot);
@@ -89,11 +93,13 @@ public class MemoGenerationQueue {
         }
     }
 
-    private String summarizeSources(List<Long> sourceIds) {
-        List<GeminiInput> inputs = sourceIds.stream()
+    private String summarizeSources(List<Long> sourceIds, String htmlTemplate) {
+        List<GeminiInput> inputs = new ArrayList<>();
+        inputs.add(GeminiInput.text(htmlTemplate));
+        sourceIds.stream()
                 .map(this::loadAsGeminiInput)
-                .toList();
-        log.info("Gemini 호출 준비: input 개수={}", inputs.size());
+                .forEach(inputs::add);
+        log.info("Gemini 호출 준비: input 개수={} (템플릿 포함)", inputs.size());
         return geminiClient.generate(inputs, SUMMARY_PROMPT);
     }
 
