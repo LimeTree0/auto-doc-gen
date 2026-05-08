@@ -106,6 +106,25 @@ export const useMemoHtmlQuery = (id: number | null) => {
     });
 }
 
+export const deleteMemo = async (id: number): Promise<void> => {
+    const response = await fetch(`${MEMOS_URL}/${id}`, { method: 'DELETE' });
+    if (!response.ok) {
+        const message = (await response.text()) || `Failed to delete memo (${response.status})`;
+        throw new Error(message);
+    }
+};
+
+export const useDeleteMemoMutation = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: deleteMemo,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: memoKeys.all });
+        },
+    });
+};
+
 export const downloadMemoDocx = async (id: number, filename?: string): Promise<void> => {
     const response = await fetch(`${MEMOS_URL}/${id}/docx`);
     if (!response.ok) {

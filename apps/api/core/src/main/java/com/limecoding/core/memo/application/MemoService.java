@@ -80,6 +80,37 @@ public class MemoService {
                 .orElseThrow(() -> new IllegalArgumentException("Memo not found: " + id));
     }
 
+    @Transactional
+    public void deleteMemo(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("memoId 가 비어 있습니다");
+        }
+        Memo memo = memoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Memo not found: " + id));
+
+        // template / result html / cached docx 파일 모두 best-effort 로 정리하고 DB 행 삭제까지 도달한다.
+        deleteUploadFile(memo.getTemplateStoredName());
+        deleteUploadFile(memo.getResultStoredName());
+        deleteUploadFile(memo.getCachedDocxStoredName());
+        memoRepository.delete(memo);
+        log.info("Memo:{} 삭제 완료 (template={}, result={}, cachedDocx={})",
+                id, memo.getTemplateStoredName(), memo.getResultStoredName(), memo.getCachedDocxStoredName());
+    }
+
+    private void deleteUploadFile(String storedName) {
+        if (storedName == null || storedName.isBlank()) {
+            return;
+        }
+        try {
+            boolean removed = Files.deleteIfExists(UPLOAD_DIRECTORY.resolve(storedName));
+            if (removed) {
+                log.info("업로드 파일 삭제: {}", storedName);
+            }
+        } catch (IOException e) {
+            log.warn("업로드 파일 삭제 실패 (계속 진행): {}", storedName, e);
+        }
+    }
+
     public String loadResultHtml(Long id) {
         Memo memo = getMemo(id);
         if (memo.getStatus() != MemoStatus.COMPLETED) {

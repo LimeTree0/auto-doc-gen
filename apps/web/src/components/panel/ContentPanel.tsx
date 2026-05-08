@@ -9,6 +9,7 @@ import {
   downloadMemoDocx,
   memoKeys,
   useCreateMemoMutation,
+  useDeleteMemoMutation,
   useMemoHtmlQuery,
   useMemosQuery,
   type Memo,
@@ -1336,12 +1337,21 @@ function timeAgo(iso: string): string {
   return `${Math.floor(mo / 12)}년 전`;
 }
 
-function MemoItem({ memo, onClick }: { memo: Memo; onClick?: () => void }) {
+function MemoItem({
+  memo,
+  onClick,
+  onDeleted,
+}: {
+  memo: Memo;
+  onClick?: () => void;
+  onDeleted?: (id: number) => void;
+}) {
   const isInFlight = memo.status === "PENDING" || memo.status === "IN_PROGRESS";
   const isFailed = memo.status === "FAILED";
   const isCompleted = memo.status === "COMPLETED";
   const isClickable = isCompleted && Boolean(onClick);
   const { mutate: convertToSource } = useAddSourceFromMemoMutation();
+  const { mutate: deleteMemoMutation } = useDeleteMemoMutation();
 
   const handleRowClick = () => {
     if (isClickable) onClick?.();
@@ -1367,6 +1377,13 @@ function MemoItem({ memo, onClick }: { memo: Memo; onClick?: () => void }) {
     convertToSource({ memoId: memo.id });
   };
 
+  const handleDelete = () => {
+    deleteMemoMutation(memo.id, {
+      onSuccess: () => onDeleted?.(memo.id),
+    });
+  };
+
+  const showMenu = isCompleted || isFailed;
   const subtitle = `소스 ${memo.sourceIds.length}개 · ${timeAgo(memo.createdAt)}`;
 
   return (
@@ -1396,7 +1413,7 @@ function MemoItem({ memo, onClick }: { memo: Memo; onClick?: () => void }) {
         </span>
         <span className="truncate text-xs text-white/50">{subtitle}</span>
       </div>
-      {isCompleted && (
+      {showMenu && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
@@ -1409,13 +1426,21 @@ function MemoItem({ memo, onClick }: { memo: Memo; onClick?: () => void }) {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-            <DropdownMenuItem onSelect={handleDownload}>
-              <FileText className="size-4 text-white/80" strokeWidth={2} />
-              <span>Docx로 내보내기</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={handleConvertToSource}>
-              <Files className="size-4 text-white/80" strokeWidth={2} />
-              <span>소스로 변환</span>
+            {isCompleted && (
+              <>
+                <DropdownMenuItem onSelect={handleDownload}>
+                  <FileText className="size-4 text-white/80" strokeWidth={2} />
+                  <span>Docx로 내보내기</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={handleConvertToSource}>
+                  <Files className="size-4 text-white/80" strokeWidth={2} />
+                  <span>소스로 변환</span>
+                </DropdownMenuItem>
+              </>
+            )}
+            <DropdownMenuItem onSelect={handleDelete}>
+              <Trash2 className="size-4 text-rose-400" strokeWidth={2} />
+              <span>삭제</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -1428,7 +1453,13 @@ type RightPanelProps = {
   className?: string;
 };
 
-function MemoList({ onSelectMemo }: { onSelectMemo: (id: number) => void }) {
+function MemoList({
+  onSelectMemo,
+  onMemoDeleted,
+}: {
+  onSelectMemo: (id: number) => void;
+  onMemoDeleted: (id: number) => void;
+}) {
   const { data: memos, isLoading, error } = useMemosQuery();
 
   if (isLoading) {
@@ -1467,6 +1498,7 @@ function MemoList({ onSelectMemo }: { onSelectMemo: (id: number) => void }) {
               ? () => onSelectMemo(memo.id)
               : undefined
           }
+          onDeleted={onMemoDeleted}
         />
       ))}
     </div>
@@ -1582,6 +1614,12 @@ function MemoDetailView({
 function RightPanel({}: RightPanelProps) {
   const [selectedMemoId, setSelectedMemoId] = useState<number | null>(null);
 
+  const handleMemoDeleted = (id: number) => {
+    if (selectedMemoId === id) {
+      setSelectedMemoId(null);
+    }
+  };
+
   return (
     <Panel
       className="h-full w-full"
@@ -1619,7 +1657,10 @@ function RightPanel({}: RightPanelProps) {
                 <Plus className="size-4 text-white" strokeWidth={2} />
               </button>
             </div>
-            <MemoList onSelectMemo={setSelectedMemoId} />
+            <MemoList
+              onSelectMemo={setSelectedMemoId}
+              onMemoDeleted={handleMemoDeleted}
+            />
           </div>
         </div>
       )}

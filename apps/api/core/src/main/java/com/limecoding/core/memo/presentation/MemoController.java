@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -77,5 +78,11 @@ public class MemoController {
                 .contentType(DOCX_MEDIA_TYPE)
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=memo-" + id + ".docx")
                 .body(data);
+    }
+
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        memoService.deleteMemo(id);
+        return ApiResponse.success(null);
     }
 }
