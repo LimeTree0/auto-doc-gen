@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 @Slf4j
 @Service
@@ -39,7 +40,20 @@ public class MemoAutoCreationService {
                 throw new RuntimeException("파일 읽기 실패: " + filename, e);
             }
         }
+        return createFromUploaded(uploaded, prompt);
+    }
 
+    public Memo createFromUploaded(List<UploadedFile> uploaded, String prompt) {
+        return createFromUploaded(uploaded, prompt, step -> {});
+    }
+
+    public Memo createFromUploaded(List<UploadedFile> uploaded, String prompt, Consumer<String> progress) {
+        if (uploaded == null || uploaded.isEmpty()) {
+            throw new IllegalArgumentException("파일이 최소 1개 이상이어야 합니다");
+        }
+        Consumer<String> safeProgress = progress == null ? step -> {} : progress;
+
+        safeProgress.accept("파일 분류 중...");
         FileClassifier.ClassificationResult classification = fileClassifier.classify(uploaded);
         UploadedFile templateFile = uploaded.get(classification.templateIndex());
         List<UploadedFile> sourceFiles = classification.sourceIndices().stream()
@@ -50,11 +64,15 @@ public class MemoAutoCreationService {
                 templateFile.filename(),
                 sourceFiles.stream().map(UploadedFile::filename).toList());
 
-        List<Long> sourceIds = sourceFiles.isEmpty()
-                ? List.of()
-                : sourceService.uploadFromBytes(sourceFiles).stream()
-                        .map(Source::getId)
-                        .toList();
+        List<Long> sourceIds;
+        if (sourceFiles.isEmpty()) {
+            sourceIds = List.of();
+        } else {
+            safeProgress.accept("자료 등록 중...");
+            sourceIds = sourceService.uploadFromBytes(sourceFiles).stream()
+                    .map(Source::getId)
+                    .toList();
+        }
 
         return memoService.requestGenerationFromBytes(templateFile, sourceIds, prompt);
     }

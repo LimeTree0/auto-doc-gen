@@ -7,6 +7,7 @@ import {
 } from "@/api/chat";
 import {
   downloadMemoDocx,
+  memoKeys,
   useCreateMemoMutation,
   useMemoHtmlQuery,
   useMemosQuery,
@@ -14,6 +15,7 @@ import {
 } from "@/api/memo";
 import {
   inferSourceType,
+  sourceKeys,
   useAddSourceFromMemoMutation,
   useDeleteSourceMutation,
   usePendingMemoConversionIds,
@@ -453,6 +455,77 @@ function LeftPanel({}: LeftPanelProps) {
   );
 }
 
+// 다운로드 링크인지 확인. /api/v1/memos/{id}/docx 패턴은 항상 다운로드 카드로 렌더한다.
+const DOWNLOAD_LINK_PATTERN = /\/api\/v1\/memos\/\d+\/docx$/;
+const isDownloadLink = (href: string | undefined): boolean =>
+  href != null && DOWNLOAD_LINK_PATTERN.test(href);
+
+function DownloadLinkCard({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      download
+      className="not-prose my-1 inline-flex max-w-full items-center gap-3 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-white no-underline transition-colors hover:border-emerald-400 hover:bg-emerald-500/20"
+    >
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20">
+        <FileText className="size-4 text-emerald-300" strokeWidth={2} />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="truncate font-medium text-white">{children}</span>
+        <span className="text-xs text-emerald-200/80">
+          클릭하여 다운로드 · DOCX
+        </span>
+      </span>
+      <Download className="size-4 shrink-0 text-emerald-300" strokeWidth={2} />
+    </a>
+  );
+}
+
+// Streamdown은 기본적으로 외부 링크 클릭 시 안전 경고 모달을 띄운다.
+// 다운로드 링크는 카드, 그 외 링크는 평범한 색상 앵커로 직접 렌더한다.
+const STREAMDOWN_COMPONENTS = {
+  a: ({
+    node: _node,
+    children,
+    href,
+    ...rest
+  }: React.AnchorHTMLAttributes<HTMLAnchorElement> & {
+    node?: unknown;
+  }) => {
+    if (isDownloadLink(href)) {
+      return <DownloadLinkCard href={href as string}>{children}</DownloadLinkCard>;
+    }
+    return (
+      <a
+        {...rest}
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-sky-400 underline underline-offset-2 hover:text-sky-300"
+      >
+        {children}
+      </a>
+    );
+  },
+};
+
+function ThinkingLine({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 pl-11 text-xs text-white/60">
+      <Loader2 className="size-3.5 animate-spin text-emerald-400" strokeWidth={2} />
+      <span>{label}</span>
+    </div>
+  );
+}
+
 function BotMessage({ content }: { content: string }) {
   return (
     <div className="flex gap-3">
@@ -461,7 +534,12 @@ function BotMessage({ content }: { content: string }) {
       </div>
       <div className="streamdown-message flex min-w-0 flex-1 flex-col gap-3 text-sm leading-relaxed text-white/90">
         {content.length > 0 ? (
-          <Streamdown>{content}</Streamdown>
+          <Streamdown
+            components={STREAMDOWN_COMPONENTS}
+            linkSafety={{ enabled: false }}
+          >
+            {content}
+          </Streamdown>
         ) : (
           <span className="inline-flex h-4 items-center gap-1 text-white/40">
             <span className="size-1.5 animate-pulse rounded-full bg-white/40" />
@@ -487,12 +565,14 @@ function UserMessage({ content }: { content: string }) {
 type ChatInputProps = {
   isStreaming: boolean;
   disabled: boolean;
-  onSend: (content: string) => void;
+  onSend: (content: string, files: File[]) => void;
   onStop: () => void;
 };
 
 function ChatInput({ isStreaming, disabled, onSend, onStop }: ChatInputProps) {
   const [value, setValue] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const trimmed = value.trim();
   const canSend = !disabled && !isStreaming && trimmed.length > 0;
@@ -500,8 +580,18 @@ function ChatInput({ isStreaming, disabled, onSend, onStop }: ChatInputProps) {
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!canSend) return;
-    onSend(trimmed);
+    onSend(trimmed, files);
     setValue("");
+    setFiles([]);
+  };
+
+  const handlePickFiles = (picked: FileList | null) => {
+    if (!picked || picked.length === 0) return;
+    setFiles((prev) => [...prev, ...Array.from(picked)]);
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -509,6 +599,30 @@ function ChatInput({ isStreaming, disabled, onSend, onStop }: ChatInputProps) {
       onSubmit={handleSubmit}
       className="flex flex-col rounded-xl border border-[#37383B] bg-bg"
     >
+      {files.length > 0 && (
+        <div className="flex flex-wrap gap-2 px-3 pt-3">
+          {files.map((file, index) => (
+            <span
+              key={`${file.name}-${index}`}
+              className="flex items-center gap-1.5 rounded-full border border-[#37383B] bg-[#2c2a24] py-1 pl-2 pr-1 text-xs text-white"
+            >
+              <FileText
+                className="size-3.5 text-amber-200"
+                strokeWidth={2}
+              />
+              <span className="max-w-[180px] truncate">{file.name}</span>
+              <button
+                type="button"
+                onClick={() => handleRemoveFile(index)}
+                className="flex size-4 items-center justify-center rounded-full hover:bg-white/10"
+                aria-label={`${file.name} 제거`}
+              >
+                <X className="size-3 text-white/70" strokeWidth={2} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
       <input
         value={value}
         onChange={(e) => setValue(e.target.value)}
@@ -516,7 +630,26 @@ function ChatInput({ isStreaming, disabled, onSend, onStop }: ChatInputProps) {
         className="border-none bg-transparent px-4 pt-3 pb-2 text-sm text-white outline-none placeholder:text-white/40 disabled:cursor-not-allowed disabled:opacity-60"
         placeholder="무엇이든 물어보세요"
       />
-      <div className="flex items-center justify-end px-3 pb-2">
+      <div className="flex items-center justify-between px-3 pb-2">
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={disabled || isStreaming}
+          aria-label="파일 첨부"
+          className="flex size-7 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Paperclip className="size-4" strokeWidth={2} />
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onClick={(e) => {
+            (e.currentTarget as HTMLInputElement).value = "";
+          }}
+          onChange={(e) => handlePickFiles(e.target.files)}
+        />
         {isStreaming ? (
           <button
             type="button"
@@ -555,6 +688,7 @@ function CenterPanel({}: CenterPanelProps) {
   const [conversationId, setConversationId] = useState<number | null>(null);
   const [streamingContent, setStreamingContent] = useState<string | null>(null);
   const [streamError, setStreamError] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const { data: messages } = useMessagesQuery(conversationId);
@@ -566,6 +700,7 @@ function CenterPanel({}: CenterPanelProps) {
         setConversationId(created.id);
         setStreamingContent(null);
         setStreamError(null);
+        setCurrentStep(null);
         after?.(created.id);
       },
     });
@@ -586,7 +721,7 @@ function CenterPanel({}: CenterPanelProps) {
     el.scrollTop = el.scrollHeight;
   }, [messages, streamingContent]);
 
-  const handleSend = async (content: string) => {
+  const handleSend = async (content: string, files: File[]) => {
     if (conversationId == null) return;
     const id = conversationId;
 
@@ -605,6 +740,7 @@ function CenterPanel({}: CenterPanelProps) {
 
     setStreamingContent("");
     setStreamError(null);
+    setCurrentStep(null);
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -613,18 +749,28 @@ function CenterPanel({}: CenterPanelProps) {
       await streamMessage(
         id,
         content,
+        files,
         {
-          onDelta: (chunk) =>
-            setStreamingContent((prev) => (prev ?? "") + chunk),
+          onDelta: (chunk) => {
+            // 어시스턴트 토큰이 흐르기 시작하면 thinking 단계는 끝났다고 보고 숨긴다.
+            setCurrentStep(null);
+            setStreamingContent((prev) => (prev ?? "") + chunk);
+          },
+          onStep: (label) => setCurrentStep(label),
           onDone: () => {
             setStreamingContent(null);
+            setCurrentStep(null);
             queryClient.invalidateQueries({
               queryKey: chatKeys.messages(id),
             });
+            // 도구가 자료 파일을 소스로 영속화했을 수 있으니 출처 패널도 갱신
+            queryClient.invalidateQueries({ queryKey: sourceKeys.all });
+            queryClient.invalidateQueries({ queryKey: memoKeys.all });
           },
           onError: (message) => {
             setStreamError(message);
             setStreamingContent(null);
+            setCurrentStep(null);
             queryClient.invalidateQueries({
               queryKey: chatKeys.messages(id),
             });
@@ -636,12 +782,14 @@ function CenterPanel({}: CenterPanelProps) {
       if ((err as Error).name === "AbortError") {
         // 사용자가 중지 — 부분 응답은 버리고 서버 상태로 동기화
         setStreamingContent(null);
+        setCurrentStep(null);
         queryClient.invalidateQueries({
           queryKey: chatKeys.messages(id),
         });
       } else {
         setStreamError((err as Error).message);
         setStreamingContent(null);
+        setCurrentStep(null);
       }
     } finally {
       if (abortRef.current === controller) {
@@ -690,7 +838,12 @@ function CenterPanel({}: CenterPanelProps) {
               <BotMessage key={message.id} content={message.content} />
             ),
           )}
-          {isStreaming && <BotMessage content={streamingContent ?? ""} />}
+          {isStreaming && (
+            <>
+              {currentStep && <ThinkingLine label={currentStep} />}
+              <BotMessage content={streamingContent ?? ""} />
+            </>
+          )}
           {streamError && (
             <span className="text-xs text-rose-400">{streamError}</span>
           )}

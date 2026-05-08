@@ -39,6 +39,7 @@ public class MemoGenerationQueue {
     private final GeminiClient geminiClient;
     private final DocumentApiClient documentApiClient;
     private final TopicExtractor topicExtractor;
+    private final MemoProgressBus progressBus;
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
@@ -57,6 +58,7 @@ public class MemoGenerationQueue {
                     memoId, snapshot.sourceIds(), snapshot.templateOriginalName());
 
             long stepAt = System.currentTimeMillis();
+            progressBus.publish(memoId, "템플릿 분석 중...");
             log.info("[Memo:{}] (1/4) 템플릿 HTML 변환 시작: storedName={}, originalName={}",
                     memoId, snapshot.templateStoredName(), snapshot.templateOriginalName());
             String htmlTemplate = convertTemplateToHtml(snapshot);
@@ -64,16 +66,19 @@ public class MemoGenerationQueue {
                     memoId, htmlTemplate.length(), System.currentTimeMillis() - stepAt);
 
             stepAt = System.currentTimeMillis();
+            progressBus.publish(memoId, "자료 요약 중...");
             String summary = summarizeSources(snapshot.sourceIds(), htmlTemplate);
             log.info("[Memo:{}] (2/4) 소스 요약 완료, 길이={}자, {}ms",
                     memoId, summary.length(), System.currentTimeMillis() - stepAt);
 
             stepAt = System.currentTimeMillis();
+            progressBus.publish(memoId, "보고서 작성 중...");
             String filledHtml = fillTemplate(htmlTemplate, summary, snapshot);
             log.info("[Memo:{}] (3/4) 템플릿 채우기 완료, 길이={}자, {}ms",
                     memoId, filledHtml.length(), System.currentTimeMillis() - stepAt);
 
             stepAt = System.currentTimeMillis();
+            progressBus.publish(memoId, "결과 저장 중...");
             String storedName = persistResult(filledHtml);
             log.info("[Memo:{}] (4/4) 결과 HTML 저장 완료, file={}, {}ms",
                     memoId, storedName, System.currentTimeMillis() - stepAt);

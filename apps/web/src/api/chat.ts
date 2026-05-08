@@ -20,7 +20,8 @@ export type Message = {
 export type ChatStreamChunk =
     | { type: 'delta'; content: string }
     | { type: 'done'; messageId: number }
-    | { type: 'error'; error: string };
+    | { type: 'error'; error: string }
+    | { type: 'step'; label: string };
 
 export type ApiResponse<T> = {
     status: string;
@@ -77,21 +78,28 @@ export type StreamCallbacks = {
     onDelta: (chunk: string) => void;
     onDone: (messageId: number) => void;
     onError: (message: string) => void;
+    onStep: (label: string) => void;
 };
 
 export const streamMessage = async (
     conversationId: number,
     content: string,
+    files: File[],
     callbacks: StreamCallbacks,
     signal: AbortSignal,
 ): Promise<void> => {
+    const formData = new FormData();
+    formData.append('content', content);
+    for (const file of files) {
+        formData.append('files', file);
+    }
     const response = await fetch(`${CHAT_URL}/${conversationId}/messages`, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
+            // multipart boundary는 브라우저가 자동 설정 — Content-Type 직접 지정 금지
             Accept: 'text/event-stream',
         },
-        body: JSON.stringify({ content }),
+        body: formData,
         signal,
     });
 
@@ -154,6 +162,8 @@ const handleEvent = (raw: string, callbacks: StreamCallbacks): void => {
         callbacks.onDone(parsed.messageId);
     } else if (type === 'error' && 'error' in parsed) {
         callbacks.onError(parsed.error);
+    } else if (type === 'step' && 'label' in parsed) {
+        callbacks.onStep(parsed.label);
     }
 };
 
