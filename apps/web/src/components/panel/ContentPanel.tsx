@@ -232,6 +232,8 @@ function FileTypeIcon({ type }: { type: SourceType }) {
     );
   if (type === "pdf")
     return <FileText className="size-4 text-rose-400" strokeWidth={2} />;
+  if (type === "audio")
+    return <AudioLines className="size-4 text-fuchsia-400" strokeWidth={2} />;
   return <FileText className="size-4 text-sky-400" strokeWidth={2} />;
 }
 

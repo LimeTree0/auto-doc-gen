@@ -37,6 +37,13 @@ public class FileClassifier {
             throw new IllegalArgumentException("파일이 비어 있습니다");
         }
         if (files.size() == 1) {
+            UploadedFile single = files.get(0);
+            SourceFormat format = SourceFormat.fromFilename(single.filename());
+            if (!format.isTemplateCapable()) {
+                throw new IllegalArgumentException(
+                        "양식으로 사용할 수 없는 파일 형식입니다: " + single.filename()
+                                + " — 양식 파일(예: .docx) 을 함께 첨부해 주세요");
+            }
             log.info("[Classify] 단일 파일 → 템플릿으로 간주, 빈 소스로 진행");
             return new ClassificationResult(0, List.of());
         }
@@ -76,7 +83,7 @@ public class FileClassifier {
                 case TEXT, HTML -> truncate(new String(bytes, StandardCharsets.UTF_8));
                 case DOCX -> truncate(documentApiClient.docxToHtml(bytes, filename));
                 case HWPX -> truncate(documentApiClient.hwpxToHtml(bytes, filename));
-                case PDF -> null;
+                case PDF, AUDIO_M4A, AUDIO_MP3 -> null;
             };
         } catch (RuntimeException e) {
             log.warn("[Classify] 스니펫 추출 실패, 파일명만 사용: {}", filename, e);

@@ -23,7 +23,9 @@ import java.util.function.Consumer;
 @Component
 public class DocumentGenerationTools {
 
-    private static final Duration MAX_WAIT = Duration.ofMinutes(5);
+    // 음성 자료가 들어오면 Gemini 처리가 텍스트보다 훨씬 길어진다.
+    // SseEmitter timeout(10분) 보다 살짝 짧게 잡아 emitter 가 먼저 닫히지 않도록 한다.
+    private static final Duration MAX_WAIT = Duration.ofMinutes(8);
     private static final Duration POLL_INTERVAL = Duration.ofMillis(800);
     private static final Consumer<String> NOOP_PROGRESS = step -> {};
 

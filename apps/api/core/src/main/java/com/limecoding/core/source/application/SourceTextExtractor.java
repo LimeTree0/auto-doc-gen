@@ -31,6 +31,9 @@ public class SourceTextExtractor {
                     .getBytes(StandardCharsets.UTF_8));
             case HWPX -> tika(documentApiClient.hwpxToHtml(content, originalName)
                     .getBytes(StandardCharsets.UTF_8));
+            // 음성은 전사 없이는 텍스트가 없다. 빈 문자열 반환 → SourceIngestionService 가
+            // 임베딩을 건너뛰고 청크 0개로 COMPLETED 처리한다.
+            case AUDIO_M4A, AUDIO_MP3 -> "";
         };
     }
 

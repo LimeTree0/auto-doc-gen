@@ -1,6 +1,6 @@
 import { useMutation, useMutationState, useQueryClient, useQuery } from '@tanstack/react-query';
 
-export type SourceType = 'docx' | 'xlsx' | 'pdf';
+export type SourceType = 'docx' | 'xlsx' | 'pdf' | 'audio';
 
 export type Source = {
     id: number;
@@ -37,6 +37,7 @@ const unwrap = async <T>(response: Response, errorMessage: string): Promise<T> =
 export const inferSourceType = (name: string): SourceType => {
     const ext = name.split('.').pop()?.toLowerCase();
     if (ext === 'docx' || ext === 'xlsx' || ext === 'pdf') return ext;
+    if (ext === 'm4a' || ext === 'mp3' || ext === 'wav' || ext === 'aac') return 'audio';
     return 'pdf';
 }
 

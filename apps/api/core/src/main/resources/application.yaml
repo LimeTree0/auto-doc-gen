@@ -1,6 +1,11 @@
 spring:
   application:
     name: core
+  servlet:
+    multipart:
+      # 음성 파일(최대 20MB) + 양식/자료 동시 업로드를 수용하도록 기본값(1MB/10MB) 상향
+      max-file-size: 25MB
+      max-request-size: 100MB
   ai:
     google:
       genai:

@@ -30,6 +30,7 @@ public class MemoGenerationQueue {
             - 템플릿의 섹션 제목과 빈칸 구조를 파악해 그에 맞춰 자료 내용을 배치하세요.
             - 템플릿에 없는 섹션은 만들지 말고, 템플릿이 요구하지만 자료에 근거가 없는 항목은 비워두세요.
             - 자료에 명시된 내용만 사용하고 추측은 하지 마세요.
+            - 자료가 음성 녹음(예: 회의/인터뷰)인 경우, 발화 내용을 핵심 위주로 요약해 템플릿에 배치하세요.
             - 출력은 반드시 한국어 **마크다운**으로만 작성하세요. HTML 태그(`<h1>`, `<p>`, `<table>`, `<div>` 등), 코드 펜스(```), 그 외 마크업은 사용하지 마세요.
             - 섹션 제목은 `#`/`##`, 목록은 `-`, 라벨-값은 `**라벨**: 값` 형식을 사용하세요.
             """;
@@ -112,6 +113,9 @@ public class MemoGenerationQueue {
         return geminiClient.generate(inputs, SUMMARY_PROMPT);
     }
 
+    // Gemini API 의 inline_data 페이로드 한도(약 20MB). 초과하면 Files API 사용이 필요하다.
+    private static final int GEMINI_INLINE_LIMIT_BYTES = 20 * 1024 * 1024;
+
     private GeminiInput loadAsGeminiInput(Long sourceId) {
         LoadedSource loaded = sourceContentLoader.load(sourceId);
         SourceFormat format = SourceFormat.fromFilename(loaded.originalName());
@@ -123,7 +127,18 @@ public class MemoGenerationQueue {
             case HWPX -> GeminiInput.text(documentApiClient.hwpxToHtml(loaded.content(), loaded.originalName()));
             case HTML -> null;
             case TEXT -> GeminiInput.text(new String(loaded.content(), StandardCharsets.UTF_8));
+            case AUDIO_M4A -> audioInput(loaded, "audio/mp4");
+            case AUDIO_MP3 -> audioInput(loaded, "audio/mpeg");
         };
+    }
+
+    private GeminiInput audioInput(LoadedSource loaded, String mimeType) {
+        if (loaded.content().length > GEMINI_INLINE_LIMIT_BYTES) {
+            throw new IllegalStateException(
+                    "음성 파일이 20MB 를 초과해 Gemini inline 입력으로 보낼 수 없습니다: "
+                            + loaded.originalName() + " (" + loaded.content().length + " bytes)");
+        }
+        return GeminiInput.inlineData(mimeType, loaded.content());
     }
 
     private String convertTemplateToHtml(MemoSnapshot snapshot) {

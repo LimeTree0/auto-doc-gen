@@ -7,7 +7,9 @@ public enum SourceFormat {
     DOCX,
     HWPX,
     HTML,
-    TEXT;
+    TEXT,
+    AUDIO_M4A,
+    AUDIO_MP3;
 
     public static SourceFormat fromFilename(String filename) {
         if (filename == null || filename.isBlank()) {
@@ -21,6 +23,17 @@ public enum SourceFormat {
         if (lower.endsWith(".txt") || lower.endsWith(".md")) {
             return TEXT;
         }
+        if (lower.endsWith(".m4a")) return AUDIO_M4A;
+        if (lower.endsWith(".mp3")) return AUDIO_MP3;
         throw new IllegalArgumentException("지원하지 않는 파일 형식: " + filename);
+    }
+
+    public boolean isAudio() {
+        return this == AUDIO_M4A || this == AUDIO_MP3;
+    }
+
+    public boolean isTemplateCapable() {
+        // 양식(템플릿)으로 사용할 수 있는 포맷. 음성은 양식이 될 수 없다.
+        return !isAudio();
     }
 }
